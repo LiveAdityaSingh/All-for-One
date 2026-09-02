@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 import {
   Atom,
   BriefcaseBusiness,
@@ -26,9 +27,33 @@ const TABS: { id: AgentId; label: string; href: string; icon: LucideIcon }[] = [
 
 export function TabBar() {
   const pathname = usePathname();
+  const navRef = useRef<HTMLElement>(null);
+
+  // The bar is fixed to the viewport, so it no longer takes up space in the
+  // document and content would scroll underneath it. Publishing its real
+  // height lets .pb-tab-bar reserve exactly that strip. Measured rather than
+  // hard-coded because the labels grow with the reader's system font size.
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const publish = () =>
+      document.documentElement.style.setProperty("--tab-bar-h", `${nav.offsetHeight}px`);
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(nav);
+    return () => observer.disconnect();
+  }, []);
 
   return (
-    <nav className="lip flex items-stretch border-t border-border bg-background-elevated">
+    <nav
+      ref={navRef}
+      // Frozen to the bottom of the viewport rather than the end of the
+      // document: the page below is free to scroll under it.
+      className="lip fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t border-border bg-background-elevated"
+      // Lifts the icons clear of the Android navigation bar, which the page
+      // draws underneath thanks to viewportFit: "cover".
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
       {TABS.map((tab) => {
         const isActive =
           tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href);

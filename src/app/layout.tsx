@@ -41,11 +41,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       {/* dvh, not vh: on mobile browsers vh ignores the collapsing address
           bar and leaves the tab bar sitting under it. */}
-      <body className="flex min-h-[100dvh] flex-col">
+      <body className="min-h-[100dvh]">
         {/* The room's lighting: one soft source at the top, behind everything. */}
         <div className="ambient-light" aria-hidden />
         <AppBootstrap />
-        <main className="flex-1 overflow-y-auto pb-4 pt-6">{children}</main>
+        <main className="pb-tab-bar pt-6">{children}</main>
         <TabBar />
       </body>
     </html>
