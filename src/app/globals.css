@@ -1,0 +1,153 @@
+@import "tailwindcss";
+
+/*
+ * Colour system (build spec §4): one hue per agent at a locked lightness/chroma
+ * (L 0.62 / C 0.13). Hue is the only variable that changes between agents.
+ *
+ * Dark-first. The ground sits at hue 268 rather than the spec's warm 70: a
+ * five-hue identity system wants a host that doesn't favour any of them, and
+ * 268 is deliberately off Lisa's 250 so the background never competes with
+ * one of the agents. Chroma is kept very low for the same reason.
+ */
+:root {
+  --background: oklch(0.155 0.010 268);
+  --background-elevated: oklch(0.205 0.010 268);
+  --foreground: oklch(0.93 0.008 268);
+  --foreground-muted: oklch(0.68 0.008 268);
+  --border: oklch(0.28 0.012 268);
+
+  /* Surfaces whose data has aged out: no lift, no light. */
+  --background-stale: oklch(0.18 0.005 268);
+  --border-stale: oklch(0.24 0.006 268);
+
+  /* A card's top edge catching the ambient light. This 1px lip is what
+     reads as a raised surface rather than a flat fill. */
+  --lip: inset 0 1px 0 rgb(255 255 255 / 0.05);
+
+  /* Agent identity hues, full chroma (Von Restorff: at most one per screen). */
+  --color-jarvis: oklch(0.62 0.13 155);
+  --color-tony: oklch(0.62 0.13 75);
+  --color-lisa: oklch(0.62 0.13 250);
+  --color-vanessa: oklch(0.62 0.13 300);
+  --color-marco: oklch(0.62 0.13 15);
+
+  /* Secondary state: ~40% chroma, same hue/lightness. */
+  --color-jarvis-muted: oklch(0.62 0.052 155);
+  --color-tony-muted: oklch(0.62 0.052 75);
+  --color-lisa-muted: oklch(0.62 0.052 250);
+  --color-vanessa-muted: oklch(0.62 0.052 300);
+  --color-marco-muted: oklch(0.62 0.052 15);
+
+  /* Staleness: any agent hue can desaturate to this when data ages out.
+     Lightness matches the agent hues exactly and chroma is zero - the
+     drained look comes from having no hue, not from being dim, so this
+     reads as "where a colour would be, with the colour gone" while
+     staying readable (4.9:1, was 3.7:1). */
+  --color-stale: oklch(0.62 0 0);
+
+  /* Severity is structural, not identity-coloured; overdue is the one
+     reserved semantic hue, distinct from every agent hue above. Lightness
+     carries "Overdue by 3 days" to 5.7:1 (was 4.1:1, below AA on the most
+     consequential text in the app), and hue 30 rather than 25 doubles the
+     separation from Marco's coral at no contrast cost. */
+  --color-overdue: oklch(0.68 0.19 30);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-background-elevated: var(--background-elevated);
+  --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-border: var(--border);
+
+  --color-jarvis: var(--color-jarvis);
+  --color-tony: var(--color-tony);
+  --color-lisa: var(--color-lisa);
+  --color-vanessa: var(--color-vanessa);
+  --color-marco: var(--color-marco);
+
+  --color-jarvis-muted: var(--color-jarvis-muted);
+  --color-tony-muted: var(--color-tony-muted);
+  --color-lisa-muted: var(--color-lisa-muted);
+  --color-vanessa-muted: var(--color-vanessa-muted);
+  --color-marco-muted: var(--color-marco-muted);
+
+  --color-stale: var(--color-stale);
+  --color-overdue: var(--color-overdue);
+
+  --color-background-stale: var(--background-stale);
+  --color-border-stale: var(--border-stale);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  /* Painted so the area behind the system bars matches the app rather
+     than showing the browser's white default. */
+  background: var(--background);
+  color-scheme: dark;
+  /* Stops the pull-to-refresh / rubber-band overscroll revealing a light
+     band above the header on Android. */
+  overscroll-behavior: none;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  /* The ambient layer below sits behind everything and must not scroll
+     away with the content. */
+  isolation: isolate;
+  /* The layout draws edge-to-edge under the status and navigation bars
+     (viewportFit: "cover"), so content is inset back out of them here. */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/*
+ * One soft light source at the top of the screen. Fixed rather than
+ * scrolled: it is the room's lighting, not part of the page. Sits behind
+ * all content and never intercepts a tap.
+ */
+.ambient-light {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    120% 62% at 50% -8%,
+    oklch(0.30 0.035 268) 0%,
+    transparent 62%
+  );
+}
+
+/* A raised surface: the ambient light catching its top edge. */
+.lip {
+  box-shadow: var(--lip);
+}
+
+/*
+ * The one element on a screen allowed to glow, tinted by whichever agent
+ * owns it. Set --glow to that agent's colour.
+ */
+.agent-glow {
+  box-shadow:
+    0 0 34px -12px color-mix(in oklch, var(--glow) 85%, transparent),
+    inset 0 1px 0 rgb(255 255 255 / 0.06);
+}
+
+.on-fill {
+  color: var(--background);
+}
+
+.agent-text-glow {
+  text-shadow: 0 0 22px color-mix(in oklch, var(--glow) 45%, transparent);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .ambient-light {
+    display: none;
+  }
+}

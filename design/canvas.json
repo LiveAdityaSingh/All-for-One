@@ -1,0 +1,245 @@
+{
+  "pages": [
+    {
+      "id": "page-3",
+      "name": "Contrast"
+    },
+    {
+      "id": "page-2",
+      "name": "Background options"
+    },
+    {
+      "id": "page-1",
+      "name": "Screens"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "BgWarm.dc.html",
+      "title": "A \u00b7 Current warm charcoal",
+      "page": "page-2",
+      "x": 0,
+      "y": 0,
+      "w": 412,
+      "h": 620
+    },
+    {
+      "file": "BgDeep.dc.html",
+      "title": "B \u00b7 Deeper warm",
+      "page": "page-2",
+      "x": 512,
+      "y": 0,
+      "w": 412,
+      "h": 620
+    },
+    {
+      "file": "BgNeutral.dc.html",
+      "title": "C \u00b7 Neutral",
+      "page": "page-2",
+      "x": 1024,
+      "y": 0,
+      "w": 412,
+      "h": 620
+    },
+    {
+      "file": "BgCool.dc.html",
+      "title": "D \u00b7 Cool slate",
+      "page": "page-2",
+      "x": 1536,
+      "y": 0,
+      "w": 412,
+      "h": 620
+    },
+    {
+      "file": "BgCoolRefined.dc.html",
+      "title": "E \u00b7 Cool slate refined",
+      "page": "page-2",
+      "x": 2048,
+      "y": 0,
+      "w": 412,
+      "h": 620
+    },
+    {
+      "file": "BgCoolLuminous.dc.html",
+      "title": "F \u00b7 Cool slate luminous",
+      "page": "page-2",
+      "x": 2560,
+      "y": 0,
+      "w": 412,
+      "h": 620
+    },
+    {
+      "file": "Main.dc.html",
+      "title": "Tony \u00b7 Job tracker",
+      "page": "page-1",
+      "x": 0,
+      "y": 0,
+      "w": 412,
+      "h": 1240
+    },
+    {
+      "file": "Lisa.dc.html",
+      "title": "Lisa \u00b7 Scheduling",
+      "page": "page-1",
+      "x": 512,
+      "y": 0,
+      "w": 412,
+      "h": 960
+    },
+    {
+      "file": "Jarvis.dc.html",
+      "title": "Jarvis \u00b7 Landing",
+      "page": "page-1",
+      "x": 1024,
+      "y": 0,
+      "w": 412,
+      "h": 820
+    },
+    {
+      "file": "Vanessa.dc.html",
+      "title": "Vanessa \u00b7 Money manager",
+      "page": "page-1",
+      "x": 1536,
+      "y": 0,
+      "w": 412,
+      "h": 1060
+    },
+    {
+      "file": "Marco.dc.html",
+      "title": "Marco \u00b7 Health",
+      "page": "page-1",
+      "x": 2048,
+      "y": 0,
+      "w": 412,
+      "h": 1120
+    },
+    {
+      "file": "ContrastNow.dc.html",
+      "title": "Now",
+      "page": "page-3",
+      "x": 0,
+      "y": 0,
+      "w": 412,
+      "h": 760
+    },
+    {
+      "file": "ContrastFixed.dc.html",
+      "title": "Proposed",
+      "page": "page-3",
+      "x": 512,
+      "y": 0,
+      "w": 412,
+      "h": 760
+    }
+  ],
+  "annotations": [
+    {
+      "id": "bg-brief",
+      "page": "page-2",
+      "x": 0,
+      "y": -170,
+      "w": 1000,
+      "text": "Same slice of Tony, six grounds. Only the background token set changes \u2014 the amber, the red severity dot and the grey stale row are identical across all six, so any difference you see is the ground acting on them.\nA\u2013D are flat fills. E and F add light: E is restrained, F goes further."
+    },
+    {
+      "id": "bg-a",
+      "page": "page-2",
+      "x": 0,
+      "y": 660,
+      "w": 412,
+      "text": "A \u2014 what the app ships today.\nThe warm cast makes Tony's amber feel at home but slightly tints everything; some read it as brown rather than neutral."
+    },
+    {
+      "id": "bg-b",
+      "page": "page-2",
+      "x": 512,
+      "y": 660,
+      "w": 412,
+      "text": "B \u2014 same hue, much darker.\nCards separate more clearly and every agent hue gains contrast. Best on OLED. Risk: can feel heavy, and the stale grey sits closer to the card colour."
+    },
+    {
+      "id": "bg-c",
+      "page": "page-2",
+      "x": 1024,
+      "y": 660,
+      "w": 412,
+      "text": "C \u2014 chroma stripped to zero.\nNo hue of its own, so all five agents sit equally against it rather than the warm ones feeling favoured. The most neutral host for a five-colour system."
+    },
+    {
+      "id": "bg-d",
+      "page": "page-2",
+      "x": 1536,
+      "y": 660,
+      "w": 412,
+      "text": "D \u2014 cool slate, the common app look.\nThe spec ruled this out for a reason worth seeing: the ground now shares Lisa's hue, so her blue has to fight the background it sits on."
+    },
+    {
+      "id": "bg-e",
+      "page": "page-2",
+      "x": 2048,
+      "y": 660,
+      "w": 412,
+      "text": "E \u2014 refined.\nGround pulled off Lisa's hue (250 \u2192 268) and down in chroma so it stops competing with her. One soft light source at the top; cards catch it on a 1px top edge. Only the pulse card actually glows."
+    },
+    {
+      "id": "bg-f",
+      "page": "page-2",
+      "x": 2560,
+      "y": 660,
+      "w": 412,
+      "text": "F \u2014 luminous.\nDeeper ground so light has somewhere to fall off to, plus a second source: the agent's own hue washing up behind the insight. The agent tints the room they are in.\nStale still gets no glow \u2014 that contrast is now the loudest signal on the screen."
+    },
+    {
+      "id": "system-note",
+      "page": "page-1",
+      "x": 0,
+      "y": -170,
+      "w": 1000,
+      "text": "All five agents on the chosen ground (option E \u2014 cool slate, refined).\nOne token set drives every screen, so the treatment cannot drift between them. Each agent lights its own room: the ground stays constant, only the hue that glows changes."
+    },
+    {
+      "id": "jarvis-note",
+      "page": "page-1",
+      "x": 1024,
+      "y": 870,
+      "w": 412,
+      "text": "Jarvis is mostly empty on purpose \u2014 a good day is an orb and nothing else. The one banner is a warning, which is the only thing allowed in that zone."
+    },
+    {
+      "id": "vanessa-note",
+      "page": "page-1",
+      "x": 1536,
+      "y": 1110,
+      "w": 412,
+      "text": "Vanessa keeps red and green for numeric work \u2014 they are free to mean loss and gain precisely because her identity is violet. HSBC shows the stale treatment: no glow, no lip, colour drained."
+    },
+    {
+      "id": "contrast-brief",
+      "page": "page-3",
+      "x": 0,
+      "y": -190,
+      "w": 924,
+      "text": "Two measured accessibility failures, side by side. Both boards render the identical slice - only three colour values differ, so anything you can see is the fix working.\nRatios are WCAG contrast against the surface each element actually sits on."
+    },
+    {
+      "id": "contrast-now",
+      "page": "page-3",
+      "x": 0,
+      "y": 800,
+      "w": 412,
+      "text": "Today. \"Overdue by 3 days\" is the most consequential text on the screen and the least readable. The stale row is worse still at 3.69 - low-vision users may not read it at all."
+    },
+    {
+      "id": "contrast-fixed",
+      "page": "page-3",
+      "x": 512,
+      "y": 800,
+      "w": 412,
+      "text": "Stale moves to L 0.62 with chroma still ZERO - the drained look comes from having no hue, not from being dim, so lightness was free to move. It is now exactly the agent lightness: where a colour would be, with the colour gone.\n\nOverdue moves to L 0.68 and hue 30. The hue nudge costs no contrast and doubles the separation from Marco's coral.\n\nThe button label flips to dark: lightening the red made light text WORSE (3.53 to 2.56), so shipping the text fix alone would have traded a readable label for an unreadable button."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-3"
+  }
+}

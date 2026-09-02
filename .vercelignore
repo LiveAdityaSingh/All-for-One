@@ -1,0 +1,7 @@
+# The Capacitor Android shell is built and distributed through the Play
+# Store, not served from the web deployment - no need to upload it.
+android/
+
+# Tests run in CI/locally, not needed to build the deployed site.
+src/**/*.test.ts
+vitest.config.mts
