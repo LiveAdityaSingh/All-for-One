@@ -5,6 +5,8 @@ import { useState } from "react";
 import { ChatInputBar } from "@/components/chat-input-bar";
 import { db } from "@/lib/db";
 import { useAgentName } from "@/lib/use-agent-names";
+import { useHasMounted } from "@/lib/use-has-mounted";
+import { alarmReach, canSetAlarm, openAlarmApp } from "@/lib/alarm";
 import { softDelete } from "@/lib/backup";
 import { addTask, isDoneForNow, isOverdue, toggleTask } from "@/lib/tasks";
 import { TASK_KIND_LABELS, type Task, type TaskKind } from "@/lib/types";
@@ -14,6 +16,11 @@ const KINDS: TaskKind[] = ["one_off", "daily", "monthly", "milestone"];
 function TaskRow({ task }: { task: Task }) {
   const done = isDoneForNow(task);
   const overdue = isOverdue(task);
+  // Which browser this is can only be known on the device, so the offer
+  // must not be decided during the build-time render.
+  const hasMounted = useHasMounted();
+  const dueAt = task.dueAt;
+  const canRing = hasMounted && !done && alarmReach(dueAt) === "ready";
 
   return (
     <li className="lip flex items-center gap-3 rounded-xl border border-border bg-background-elevated p-3">
@@ -57,6 +64,18 @@ function TaskRow({ task }: { task: Task }) {
         </span>
       )}
 
+      {/* The app itself cannot ring; the clock app can. This hands the
+          reminder over rather than pretending otherwise. */}
+      {canRing && dueAt && (
+        <button
+          onClick={() => openAlarmApp(task.title, new Date(dueAt))}
+          className="shrink-0 rounded-full border px-2.5 py-1 text-xs"
+          style={{ borderColor: "var(--color-lisa-muted)", color: "var(--color-lisa)" }}
+        >
+          Set alarm
+        </button>
+      )}
+
       <button
         onClick={() => softDelete("tasks", task.id)}
         className="shrink-0 text-xs text-foreground-muted underline"
@@ -64,6 +83,19 @@ function TaskRow({ task }: { task: Task }) {
         Remove
       </button>
     </li>
+  );
+}
+
+function AlarmNote() {
+  const hasMounted = useHasMounted();
+  if (!hasMounted) return null;
+
+  return (
+    <p className="px-4 text-xs text-foreground-muted">
+      {canSetAlarm()
+        ? "This app can't ring on its own, so a dated reminder gets a Set alarm button that hands it to your clock app. Times within the next day only - an alarm has no date, so anything further out would ring on the wrong one."
+        : "Reminders are kept here, not alerted. Handing one to the phone's clock app needs Chrome on Android; this browser has no clock app to pass it to."}
+    </p>
   );
 }
 
@@ -146,6 +178,8 @@ export default function LisaPage() {
           {open.map((task) => <TaskRow key={task.id} task={task} />)}
         </ul>
       )}
+
+      <AlarmNote />
 
       {done.length > 0 && (
         <div className="flex flex-col gap-2">

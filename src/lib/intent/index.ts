@@ -406,7 +406,7 @@ export function describeIntent(intent: CaptureIntent): string {
       return `Logged ${intent.activity}` +
         (intent.durationMinutes ? ` - ${intent.durationMinutes} min` : "");
     case "schedule_event":
-      return `Scheduled "${intent.title}"` +
+      return `Saved "${intent.title}"` +
         (intent.when ? ` for ${intent.when.toLocaleString()}` : "");
     case "log_income":
       return `Income of ${formatMoney(intent.amount)} logged`;
