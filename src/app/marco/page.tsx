@@ -4,9 +4,11 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { CaptureList } from "@/components/capture-list";
 import { ChatInputBar } from "@/components/chat-input-bar";
 import { db } from "@/lib/db";
+import { useAgentName } from "@/lib/use-agent-names";
 import { buildWeeklyReport, describeTrend } from "@/lib/health";
 
 export default function MarcoPage() {
+  const name = useAgentName("marco");
   const captures = useLiveQuery(() => db.captures.toArray(), []);
   const report = buildWeeklyReport(captures ?? []);
 
@@ -14,7 +16,7 @@ export default function MarcoPage() {
     <div className="flex flex-col gap-4">
       <h1 className="agent-text-glow px-4 text-lg font-semibold"
         style={{ color: "var(--color-marco)", ["--glow" as string]: "var(--color-marco)" }}>
-        Marco
+        {name}
       </h1>
 
       {/*

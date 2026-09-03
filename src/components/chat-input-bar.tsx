@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { captureUtterance } from "@/lib/capture";
 import { getSpeechLocale } from "@/lib/locale";
+import { useAgentName } from "@/lib/use-agent-names";
 import type { Answer } from "@/lib/cross-agent";
 import { ensureNotificationPermission } from "@/lib/notifications";
 import { useOrbStore } from "@/store/orb-store";
@@ -60,6 +61,7 @@ function getSpeechRecognition(): SpeechRecognitionLike | null {
 }
 
 export function ChatInputBar({ variant, placeholder }: ChatInputBarProps) {
+  const homeName = useAgentName("jarvis");
   const [text, setText] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [answer, setAnswer] = useState<Answer | null>(null);
@@ -232,7 +234,7 @@ export function ChatInputBar({ variant, placeholder }: ChatInputBarProps) {
             aria-hidden
             className="h-2.5 w-2.5 rounded-full"
             style={{ backgroundColor: "var(--color-jarvis)" }}
-            title="Jarvis is listening from here too"
+            title={`${homeName} is listening from here too`}
           />
         )}
       </form>

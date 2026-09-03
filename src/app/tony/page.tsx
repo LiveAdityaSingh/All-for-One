@@ -4,6 +4,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { AppLink } from "@/components/app-link";
 import { ChatInputBar } from "@/components/chat-input-bar";
 import { db } from "@/lib/db";
+import { useAgentName } from "@/lib/use-agent-names";
 import { getNudgeStatus, recordNudgeIgnored, undoDecay } from "@/lib/nudge-engine";
 import { STAGE_LABELS, type ApplicationStage, type JobApplication } from "@/lib/types";
 
@@ -95,6 +96,7 @@ function ApplicationRow({ app }: { app: JobApplication }) {
 }
 
 export default function TonyPage() {
+  const name = useAgentName("tony");
   const applications = useLiveQuery(
     () => db.applications.orderBy("stageEnteredAt").reverse().toArray(),
     [],
@@ -105,7 +107,7 @@ export default function TonyPage() {
       <div className="flex items-center justify-between px-4">
         <h1 className="agent-text-glow text-lg font-semibold"
           style={{ color: "var(--color-tony)", ["--glow" as string]: "var(--color-tony)" }}>
-          Tony
+          {name}
         </h1>
         <div className="flex gap-3 text-xs text-foreground-muted">
           <AppLink href="/tony/new">Add</AppLink>

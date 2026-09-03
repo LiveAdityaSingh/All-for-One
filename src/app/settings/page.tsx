@@ -10,6 +10,16 @@ import {
 } from "@/lib/llm";
 import { useHasMounted } from "@/lib/use-has-mounted";
 import {
+  AGENT_IDS,
+  CHARACTER_NAMES,
+  DEFAULT_AGENT_NAMES,
+  MAX_AGENT_NAME,
+  nameClash,
+  normaliseAgentName,
+} from "@/lib/agent-names";
+import { useAgentNamesStore } from "@/store/agent-names-store";
+import type { AgentId } from "@/lib/types";
+import {
   backupFilename,
   buildBackup,
   parseBackup,
@@ -304,6 +314,111 @@ function VoiceAndMoney() {
   );
 }
 
+
+// Renaming is cosmetic: the ids behind these names key the colours, the
+// routes and every stored record, so a rename can never orphan data.
+function AgentNames() {
+  const names = useAgentNamesStore((s) => s.names);
+  const rename = useAgentNamesStore((s) => s.rename);
+  const applyAll = useAgentNamesStore((s) => s.applyAll);
+
+  // Held separately from the saved name so a half-typed value is never
+  // written, and an invalid one can be explained rather than swallowed.
+  const [drafts, setDrafts] = useState<Partial<Record<AgentId, string>>>({});
+  const [error, setError] = useState<string | null>(null);
+
+  function commit(id: AgentId) {
+    const draft = drafts[id];
+    setDrafts((d) => ({ ...d, [id]: undefined }));
+    if (draft === undefined) return;
+
+    // An emptied field means "give me the default back".
+    if (!draft.trim()) {
+      setError(null);
+      rename(id, null);
+      return;
+    }
+
+    const clean = normaliseAgentName(draft);
+    if (!clean) {
+      setError(`Names are 1-${MAX_AGENT_NAME} characters, letters and numbers.`);
+      return;
+    }
+
+    const clash = nameClash(names, id, clean);
+    if (clash) {
+      setError(`"${names[clash]}" is already taken.`);
+      return;
+    }
+
+    setError(null);
+    rename(id, clean);
+  }
+
+  const usingCharacters = AGENT_IDS.every((id) => names[id] === CHARACTER_NAMES[id]);
+  const usingDefaults = AGENT_IDS.every((id) => names[id] === DEFAULT_AGENT_NAMES[id]);
+
+  return (
+    <div className="lip flex flex-col gap-3 rounded-2xl border border-border bg-background-elevated p-4">
+      <span className="text-sm font-medium">What to call each agent</span>
+
+      <div className="flex flex-col gap-2">
+        {AGENT_IDS.map((id) => (
+          <label key={id} className="flex items-center gap-3">
+            <span
+              className="h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: `var(--color-${id})` }}
+              aria-hidden
+            />
+            <input
+              value={drafts[id] ?? names[id]}
+              onChange={(e) => setDrafts((d) => ({ ...d, [id]: e.target.value }))}
+              onBlur={() => commit(id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+                if (e.key === "Escape") setDrafts((d) => ({ ...d, [id]: undefined }));
+              }}
+              maxLength={MAX_AGENT_NAME}
+              aria-label={`Name for the ${DEFAULT_AGENT_NAMES[id]} agent`}
+              className="min-w-0 flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            />
+            <span className="w-16 shrink-0 text-right text-[11px] text-foreground-muted">
+              {names[id] === DEFAULT_AGENT_NAMES[id] ? "default" : DEFAULT_AGENT_NAMES[id]}
+            </span>
+          </label>
+        ))}
+      </div>
+
+      {error && (
+        <p className="text-xs" style={{ color: "var(--color-overdue)" }}>{error}</p>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => { setError(null); applyAll(CHARACTER_NAMES); }}
+          disabled={usingCharacters}
+          className="rounded-full border border-border px-3 py-1 text-xs disabled:opacity-40"
+        >
+          Use character names
+        </button>
+        <button
+          onClick={() => { setError(null); applyAll({}); }}
+          disabled={usingDefaults}
+          className="rounded-full border border-border px-3 py-1 text-xs disabled:opacity-40"
+        >
+          Reset to defaults
+        </button>
+      </div>
+
+      <p className="text-xs text-foreground-muted">
+        You can also just say it: &ldquo;rename {names.tony} to Applications&rdquo; in the
+        chat on any screen. Only the label changes &mdash; nothing you have already
+        logged moves.
+      </p>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   return (
     <div className="flex flex-col gap-4 px-4">
@@ -312,6 +427,8 @@ export default function SettingsPage() {
       <YourData />
 
       <VoiceAndMoney />
+
+      <AgentNames />
 
       <p className="text-sm text-foreground-muted">
         Keys are optional. Without one the app still captures everything it recognises

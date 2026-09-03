@@ -7,6 +7,7 @@ import { ChatInputBar } from "@/components/chat-input-bar";
 import { CategoryChart } from "@/components/finance/category-chart";
 import { PulseCard } from "@/components/finance/pulse-card";
 import { db } from "@/lib/db";
+import { useAgentName } from "@/lib/use-agent-names";
 import { addAccount, computeRunway, daysSince, isStale, updateBalance } from "@/lib/finance";
 import {
   deleteTransaction,
@@ -84,6 +85,7 @@ function AccountCard({ account }: { account: Account }) {
 }
 
 export default function VanessaPage() {
+  const agentName = useAgentName("vanessa");
   const { formatMoney: money } = useMoney();
   const accounts = useLiveQuery(() => db.accounts.toArray(), []);
   const snapshots = useLiveQuery(() => db.balanceSnapshots.toArray(), []);
@@ -146,7 +148,7 @@ export default function VanessaPage() {
         <div>
           <h1 className="agent-text-glow text-2xl font-semibold"
             style={{ color: "var(--color-vanessa)", ["--glow" as string]: "var(--color-vanessa)" }}>
-            Vanessa
+            {agentName}
           </h1>
           <p className="text-xs text-foreground-muted">Money manager</p>
         </div>

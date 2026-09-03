@@ -11,22 +11,27 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { AppLink } from "@/components/app-link";
+import { useAgentNames } from "@/lib/use-agent-names";
 import type { AgentId } from "@/lib/types";
 
+// Labels are whatever the user calls each agent; only the order, the
+// icons and the ids are fixed here.
+//
 // Tab order and centre placement are both deliberate (build spec §5):
 // Jarvis in the centre (easiest thumb target, mirrors the architecture),
 // all five always shown at the same locked chroma - no muted inactive tabs.
 // Each icon names the agent's domain; Jarvis's atom echoes the landing orb.
-const TABS: { id: AgentId; label: string; href: string; icon: LucideIcon }[] = [
-  { id: "tony", label: "Tony", href: "/tony", icon: BriefcaseBusiness },
-  { id: "lisa", label: "Lisa", href: "/lisa", icon: CalendarDays },
-  { id: "jarvis", label: "Jarvis", href: "/", icon: Atom },
-  { id: "vanessa", label: "Vanessa", href: "/vanessa", icon: Wallet },
-  { id: "marco", label: "Marco", href: "/marco", icon: HeartPulse },
+const TABS: { id: AgentId; href: string; icon: LucideIcon }[] = [
+  { id: "tony", href: "/tony", icon: BriefcaseBusiness },
+  { id: "lisa", href: "/lisa", icon: CalendarDays },
+  { id: "jarvis", href: "/", icon: Atom },
+  { id: "vanessa", href: "/vanessa", icon: Wallet },
+  { id: "marco", href: "/marco", icon: HeartPulse },
 ];
 
 export function TabBar() {
   const pathname = usePathname();
+  const names = useAgentNames();
   const navRef = useRef<HTMLElement>(null);
 
   // The bar is fixed to the viewport, so it no longer takes up space in the
@@ -81,7 +86,7 @@ export function TabBar() {
               className={`text-sm ${isActive ? "font-semibold" : "font-normal"}`}
               style={{ color: `var(--color-${tab.id})` }}
             >
-              {tab.label}
+              {names[tab.id]}
             </span>
             <span
               className="h-1 w-1 rounded-full"

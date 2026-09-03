@@ -13,6 +13,8 @@ import { revertBalance, updateBalance, type BalanceChange } from "./finance";
 import { answerQuestion, type Answer } from "./cross-agent";
 import { escalate } from "./intent/escalate";
 import type { AgentId } from "./types";
+import { getAgentNameOverrides, getAgentNames, nameClash } from "./agent-names";
+import { useAgentNamesStore } from "@/store/agent-names-store";
 import { CURRENCY_NAMES, getCurrency, type CurrencyCode } from "./locale";
 
 // Everything needed to put the database back exactly as it was. Voice
@@ -22,7 +24,10 @@ import { CURRENCY_NAMES, getCurrency, type CurrencyCode } from "./locale";
 export type UndoStep =
   | { kind: "delete"; table: SyncedTable; id: string }
   | { kind: "deleteTransaction"; id: string }
-  | { kind: "revertBalance"; change: BalanceChange };
+  | { kind: "revertBalance"; change: BalanceChange }
+  // `previous` is the override that was in place, not the name that was
+  // showing: null restores the shipped default rather than pinning it.
+  | { kind: "renameAgent"; id: AgentId; previous: string | null };
 
 export async function undoCapture(steps: UndoStep[]): Promise<void> {
   // Reverse order, so a capture that wrote several rows unwinds the way it
@@ -30,6 +35,8 @@ export async function undoCapture(steps: UndoStep[]): Promise<void> {
   for (const step of [...steps].reverse()) {
     if (step.kind === "delete") await softDelete(step.table, step.id);
     else if (step.kind === "deleteTransaction") await deleteTransaction(step.id);
+    else if (step.kind === "renameAgent")
+      useAgentNamesStore.getState().rename(step.id, step.previous);
     else await revertBalance(step.change);
   }
 }
@@ -149,7 +156,7 @@ async function applyBalance(
       agent: null,
       message: accounts.length
         ? `No account called "${accountName}". You have: ${accounts.map((a) => a.name).join(", ")}.`
-        : `No accounts yet - add one on Vanessa's screen first.`,
+        : `No accounts yet - add one on the ${getAgentNames().vanessa} screen first.`,
     };
   }
 
@@ -178,6 +185,36 @@ const UNPARSED_HINT =
   "\"spent 12 quid on lunch\", \"did 45 minutes legs\", " +
   "\"remind me to call the plumber at 5pm\", or ask \"what's my runway?\".";
 
+function applyRename(target: AgentId, name: string): CaptureOutcome {
+  const names = getAgentNames();
+  const before = names[target];
+
+  if (before === name) {
+    return { ok: true, agent: null, message: `Already called "${name}".` };
+  }
+
+  // Two agents answering to one word would make every later spoken rename
+  // ambiguous, so this is refused rather than quietly allowed.
+  const clash = nameClash(names, target, name);
+  if (clash) {
+    return {
+      ok: false,
+      agent: null,
+      message: `"${names[clash]}" is already taken. Pick a different name.`,
+    };
+  }
+
+  const previous = getAgentNameOverrides()[target] ?? null;
+  useAgentNamesStore.getState().rename(target, name);
+
+  return {
+    ok: true,
+    agent: null,
+    message: `Renamed ${before} to ${name}.`,
+    undo: [{ kind: "renameAgent", id: target, previous }],
+  };
+}
+
 export async function captureUtterance(text: string): Promise<CaptureOutcome> {
   let intent = classifyUtterance(text);
 
@@ -198,6 +235,12 @@ export async function captureUtterance(text: string): Promise<CaptureOutcome> {
   if (intent.type === "question") {
     const answer = await answerQuestion(intent.topic);
     return { ok: true, agent: null, message: answer.text, answer };
+  }
+
+  // Renaming changes what the app calls things, never any stored record,
+  // so it is applied inline and never routes to an agent screen.
+  if (intent.type === "rename_agent") {
+    return applyRename(intent.target, intent.name);
   }
 
   if (intent.type === "set_balance") {

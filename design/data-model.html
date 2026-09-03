@@ -1,0 +1,746 @@
+<title>All-for-One Data Model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
+
+<style>
+  /* ------------------------------------------------------------------
+     Tokens are lifted from the app's own globals.css: one hue per agent
+     at a locked L 0.62 / C 0.13, on a ground at hue 268 that favours
+     none of them. Light mode drops the agents to L 0.48 / C 0.15 so they
+     stay readable as text on a pale ground.
+     ------------------------------------------------------------------ */
+  :root {
+    --bg:        oklch(0.985 0.004 268);
+    --surface:   oklch(1 0 0);
+    --surface-2: oklch(0.965 0.005 268);
+    --line:      oklch(0.885 0.008 268);
+    --line-soft: oklch(0.93 0.006 268);
+    --ink:       oklch(0.24 0.014 268);
+    --ink-dim:   oklch(0.50 0.010 268);
+    --ink-faint: oklch(0.63 0.008 268);
+
+    --tony:    oklch(0.48 0.13 75);
+    --lisa:    oklch(0.48 0.15 250);
+    --jarvis:  oklch(0.46 0.13 155);
+    --vanessa: oklch(0.48 0.16 300);
+    --marco:   oklch(0.52 0.17 15);
+    --sys:     oklch(0.52 0 0);
+
+    --glow: transparent;
+    --shadow: 0 1px 2px oklch(0.24 0.014 268 / 0.06),
+              0 6px 18px -10px oklch(0.24 0.014 268 / 0.18);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        oklch(0.155 0.010 268);
+      --surface:   oklch(0.205 0.010 268);
+      --surface-2: oklch(0.185 0.009 268);
+      --line:      oklch(0.28 0.012 268);
+      --line-soft: oklch(0.235 0.010 268);
+      --ink:       oklch(0.93 0.008 268);
+      --ink-dim:   oklch(0.68 0.008 268);
+      --ink-faint: oklch(0.55 0.008 268);
+
+      --tony:    oklch(0.62 0.13 75);
+      --lisa:    oklch(0.62 0.13 250);
+      --jarvis:  oklch(0.62 0.13 155);
+      --vanessa: oklch(0.62 0.13 300);
+      --marco:   oklch(0.62 0.13 15);
+      --sys:     oklch(0.62 0 0);
+
+      --glow: oklch(0.30 0.035 268);
+      --shadow: inset 0 1px 0 oklch(1 0 0 / 0.05);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg:        oklch(0.155 0.010 268);
+    --surface:   oklch(0.205 0.010 268);
+    --surface-2: oklch(0.185 0.009 268);
+    --line:      oklch(0.28 0.012 268);
+    --line-soft: oklch(0.235 0.010 268);
+    --ink:       oklch(0.93 0.008 268);
+    --ink-dim:   oklch(0.68 0.008 268);
+    --ink-faint: oklch(0.55 0.008 268);
+
+    --tony:    oklch(0.62 0.13 75);
+    --lisa:    oklch(0.62 0.13 250);
+    --jarvis:  oklch(0.62 0.13 155);
+    --vanessa: oklch(0.62 0.13 300);
+    --marco:   oklch(0.62 0.13 15);
+    --sys:     oklch(0.62 0 0);
+
+    --glow: oklch(0.30 0.035 268);
+    --shadow: inset 0 1px 0 oklch(1 0 0 / 0.05);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* The app's one soft light source, behind everything. */
+  .ambient {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(120% 60% at 50% -10%, var(--glow) 0%, transparent 62%);
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: clamp(2rem, 5vw, 4.5rem) clamp(1.1rem, 4vw, 2.5rem) 5rem;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(2.5rem, 5vw, 3.75rem);
+  }
+
+  code, .mono, dt, .ty {
+    font-family: "Geist Mono", ui-monospace, "SF Mono", "Cascadia Mono", Menlo, monospace;
+    font-feature-settings: "ss01";
+  }
+
+  /* ---------------------------------------------------- masthead ---- */
+  .masthead { display: flex; flex-direction: column; gap: 1.15rem; }
+
+  .eyebrow {
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(2rem, 5.5vw, 3rem);
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.08;
+    text-wrap: balance;
+  }
+
+  .standfirst {
+    margin: 0;
+    max-width: 62ch;
+    color: var(--ink-dim);
+    font-size: 1.02rem;
+  }
+
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 2.25rem;
+    padding-top: 1.15rem;
+    border-top: 1px solid var(--line);
+  }
+  .fact { display: flex; flex-direction: column; gap: 0.1rem; padding: 0.4rem 0; }
+  .fact b {
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 1.05rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+  .fact span {
+    font-size: 0.72rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  /* ------------------------------------------------------ sections -- */
+  section { display: flex; flex-direction: column; gap: 1.4rem; }
+
+  .sec-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.85rem;
+    flex-wrap: wrap;
+    padding-bottom: 0.7rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .sec-head h2 {
+    margin: 0;
+    font-size: 1.32rem;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    color: var(--own, var(--ink));
+  }
+  .sec-head p { margin: 0; color: var(--ink-dim); font-size: 0.9rem; max-width: 58ch; }
+
+  .owner-dot {
+    width: 0.6rem; height: 0.6rem;
+    border-radius: 50%;
+    background: var(--own, var(--sys));
+    flex: none;
+    transform: translateY(-1px);
+  }
+
+  /* --------------------------------------------------- store block -- */
+  .stores { display: grid; gap: 1rem; }
+  @media (min-width: 760px) { .stores.two { grid-template-columns: 1fr 1fr; } }
+
+  .store {
+    background: var(--surface);
+    border: 1px solid var(--line-soft);
+    border-left: 3px solid var(--own, var(--sys));
+    border-radius: 0 10px 10px 0;
+    box-shadow: var(--shadow);
+    padding: 1.05rem 1.15rem 0.65rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    min-width: 0;
+  }
+
+  .store-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+  .store-name { margin: 0; font-family: "Geist Mono", ui-monospace, monospace; font-size: 1rem; font-weight: 600; color: var(--own, var(--ink)); letter-spacing: -0.01em; }
+  .store-count { font-size: 0.72rem; color: var(--ink-faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .store-note { margin: 0; font-size: 0.83rem; color: var(--ink-dim); }
+
+  .fields { margin: 0; display: flex; flex-direction: column; }
+  .f {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 0.35rem 0.9rem;
+    padding: 0.34rem 0;
+    border-top: 1px solid var(--line-soft);
+  }
+  .f:first-child { border-top: 0; }
+  .f dt { margin: 0; font-size: 0.845rem; font-weight: 500; min-width: 0; overflow-wrap: anywhere; }
+  .f dd { margin: 0; }
+  .ty { font-size: 0.78rem; color: var(--ink-faint); text-align: right; white-space: nowrap; }
+
+  /* Primary key and indexed fields are the two things a schema page has
+     to answer, so they are marked on the field itself, not in a legend. */
+  .f dt::before {
+    content: "";
+    display: inline-block;
+    width: 0.42rem; height: 0.42rem;
+    margin-right: 0.5rem;
+    border-radius: 50%;
+    background: transparent;
+    border: 1px solid var(--line);
+    vertical-align: 0.1em;
+  }
+  .f.idx dt::before { background: var(--own, var(--sys)); border-color: var(--own, var(--sys)); }
+  .f.pk  dt::before { background: transparent; border: 2px solid var(--own, var(--sys)); }
+  .f.pk dt, .f.idx dt { color: var(--ink); }
+  .f:not(.pk):not(.idx) dt { color: var(--ink-dim); }
+
+  .ref { display: block; font-size: 0.73rem; color: var(--ink-faint); padding-left: 0.92rem; }
+  .ref b { font-family: "Geist Mono", ui-monospace, monospace; font-weight: 500; color: var(--ink-dim); }
+
+  /* ------------------------------------------------------- legend --- */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    padding: 0.85rem 1.05rem;
+    background: var(--surface-2);
+    border: 1px solid var(--line-soft);
+    border-radius: 10px;
+    font-size: 0.82rem;
+    color: var(--ink-dim);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 0.5rem; }
+  .key-dot { width: 0.42rem; height: 0.42rem; border-radius: 50%; flex: none; }
+  .key-dot.pk { border: 2px solid var(--ink-dim); }
+  .key-dot.idx { background: var(--ink-dim); }
+  .key-dot.plain { border: 1px solid var(--line); }
+
+  /* --------------------------------------------------- prose block -- */
+  .prose { max-width: 66ch; display: flex; flex-direction: column; gap: 0.85rem; }
+  .prose p { margin: 0; color: var(--ink-dim); }
+  .prose strong { color: var(--ink); font-weight: 600; }
+  .prose code { font-size: 0.85em; color: var(--ink); background: var(--surface-2); padding: 0.08em 0.34em; border-radius: 4px; }
+
+  /* ---------------------------------------------------- migrations -- */
+  .versions { display: flex; flex-direction: column; }
+  .v {
+    display: grid;
+    grid-template-columns: 3.1rem minmax(0, 1fr);
+    gap: 0 1.1rem;
+    padding: 0.9rem 0;
+    border-top: 1px solid var(--line-soft);
+  }
+  .v:first-child { border-top: 0; }
+  .v-num {
+    font-family: "Geist Mono", ui-monospace, monospace;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .v-body { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; }
+  .v-body h3 { margin: 0; font-size: 0.92rem; font-weight: 600; }
+  .v-body h3 code { font-weight: 500; font-size: 0.88em; }
+  .v-body p { margin: 0; font-size: 0.87rem; color: var(--ink-dim); }
+  .moved {
+    align-self: start;
+    font-size: 0.73rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--marco);
+    border: 1px solid color-mix(in oklch, var(--marco) 35%, transparent);
+    border-radius: 999px;
+    padding: 0.05rem 0.5rem;
+    margin-top: 0.15rem;
+  }
+
+  /* ----------------------------------------------------- enum list -- */
+  .enums { display: grid; gap: 0.9rem; }
+  @media (min-width: 700px) { .enums { grid-template-columns: 1fr 1fr; } }
+  .enum { display: flex; flex-direction: column; gap: 0.45rem; padding: 0.85rem 0 0; border-top: 1px solid var(--line-soft); }
+  .enum h3 { margin: 0; font-family: "Geist Mono", ui-monospace, monospace; font-size: 0.86rem; font-weight: 600; color: var(--own, var(--ink)); }
+  .vals { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+  .vals code {
+    font-size: 0.75rem;
+    padding: 0.1rem 0.44rem;
+    border-radius: 5px;
+    background: var(--surface-2);
+    border: 1px solid var(--line-soft);
+    color: var(--ink-dim);
+  }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding-top: 1.4rem;
+    font-size: 0.82rem;
+    color: var(--ink-faint);
+    max-width: 68ch;
+  }
+  footer code { color: var(--ink-dim); }
+</style>
+
+<div class="ambient" aria-hidden="true"></div>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">Read from a live browser · IndexedDB version 60</p>
+    <h1>All-for-One Data Model</h1>
+    <p class="standfirst">
+      Every record the five agents write lives on the device, in one IndexedDB database
+      named <code class="mono">all-for-one</code>, managed through Dexie. There is no server
+      copy and no account: the database is scoped to the browser origin, so a second browser
+      or a second phone starts empty.
+    </p>
+    <div class="facts">
+      <div class="fact"><b>10</b><span>object stores</span></div>
+      <div class="fact"><b>26</b><span>secondary indexes</span></div>
+      <div class="fact"><b>8</b><span>travel in a backup</span></div>
+      <div class="fact"><b>6</b><span>schema versions</span></div>
+      <div class="fact"><b>2</b><span>data migrations</span></div>
+    </div>
+  </header>
+
+  <div class="legend">
+    <span><i class="key-dot pk"></i> primary key</span>
+    <span><i class="key-dot idx"></i> indexed &mdash; can be queried and sorted on</span>
+    <span><i class="key-dot plain"></i> stored only &mdash; readable once the record is loaded</span>
+  </div>
+
+  <!-- ============================================================ TONY -->
+  <section style="--own: var(--tony)">
+    <div class="sec-head">
+      <i class="owner-dot"></i>
+      <h2>Tony</h2>
+      <p>Job applications, the CV variants sent with them, and the ledger of claims those CVs may draw on.</p>
+    </div>
+
+    <div class="stores">
+      <article class="store">
+        <div class="store-head">
+          <h3 class="store-name">applications</h3>
+          <span class="store-count">12 fields · 5 indexes</span>
+        </div>
+        <dl class="fields">
+          <div class="f pk"><dt>id</dt><dd class="ty">string</dd></div>
+          <div class="f idx"><dt>company</dt><dd class="ty">string</dd></div>
+          <div class="f"><dt>role</dt><dd class="ty">string</dd></div>
+          <div class="f idx"><dt>stage</dt><dd class="ty">ApplicationStage</dd></div>
+          <div class="f idx"><dt>lifecycleStatus</dt><dd class="ty">LifecycleStatus</dd></div>
+          <div class="f"><dt>cvVariantId</dt><dd class="ty">string | null</dd>
+            <dd class="ref">references <b>cvVariants.id</b></dd></div>
+          <div class="f"><dt>appliedAt</dt><dd class="ty">ISO date</dd></div>
+          <div class="f idx"><dt>stageEnteredAt</dt><dd class="ty">ISO date</dd>
+            <dd class="ref">when <b>stage</b> was last set &mdash; drives every nudge timer</dd></div>
+          <div class="f"><dt>lastNudgedAt</dt><dd class="ty">ISO date | null</dd></div>
+          <div class="f"><dt>nudgesIgnored</dt><dd class="ty">number</dd></div>
+          <div class="f"><dt>notes</dt><dd class="ty">string</dd></div>
+          <div class="f idx"><dt>modifiedAt</dt><dd class="ty">ISO date</dd></div>
+        </dl>
+      </article>
+
+      <div class="stores two">
+        <article class="store">
+          <div class="store-head">
+            <h3 class="store-name">cvVariants</h3>
+            <span class="store-count">4 fields · 1 index</span>
+          </div>
+          <p class="store-note">Named versions of the CV, so you can tell which one went where.</p>
+          <dl class="fields">
+            <div class="f pk"><dt>id</dt><dd class="ty">string</dd></div>
+            <div class="f idx"><dt>name</dt><dd class="ty">string</dd></div>
+            <div class="f"><dt>createdAt</dt><dd class="ty">ISO date</dd></div>
+            <div class="f"><dt>modifiedAt</dt><dd class="ty">ISO date</dd></div>
+          </dl>
+        </article>
+
+        <article class="store">
+          <div class="store-head">
+            <h3 class="store-name">claims</h3>
+            <span class="store-count">5 fields · 1 index</span>
+          </div>
+          <p class="store-note">Tony may only draft a CV bullet from a claim you have confirmed.</p>
+          <dl class="fields">
+            <div class="f pk"><dt>id</dt><dd class="ty">string</dd></div>
+            <div class="f"><dt>text</dt><dd class="ty">string</dd></div>
+            <div class="f idx"><dt>confirmed</dt><dd class="ty">boolean</dd></div>
+            <div class="f"><dt>createdAt</dt><dd class="ty">ISO date</dd></div>
+            <div class="f"><dt>modifiedAt</dt><dd class="ty">ISO date</dd></div>
+          </dl>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ LISA -->
+  <section style="--own: var(--lisa)">
+    <div class="sec-head">
+      <i class="owner-dot"></i>
+      <h2>Lisa</h2>
+      <p>One table covers one-off reminders, repeating habits and dated milestones alike.</p>
+    </div>
+
+    <div class="stores">
+      <article class="store">
+        <div class="store-head">
+          <h3 class="store-name">tasks</h3>
+          <span class="store-count">8 fields · 5 indexes</span>
+        </div>
+        <dl class="fields">
+          <div class="f pk"><dt>id</dt><dd class="ty">string</dd></div>
+          <div class="f"><dt>title</dt><dd class="ty">string</dd></div>
+          <div class="f idx"><dt>kind</dt><dd class="ty">TaskKind</dd></div>
+          <div class="f idx"><dt>dueAt</dt><dd class="ty">ISO date | null</dd>
+            <dd class="ref">null for an undated daily habit</dd></div>
+          <div class="f idx"><dt>completedAt</dt><dd class="ty">ISO date | null</dd></div>
+          <div class="f"><dt>lastCompletedOn</dt><dd class="ty">YYYY-MM-DD | null</dd>
+            <dd class="ref">lets a daily task reset each day without losing its history</dd></div>
+          <div class="f idx"><dt>createdAt</dt><dd class="ty">ISO date</dd></div>
+          <div class="f idx"><dt>modifiedAt</dt><dd class="ty">ISO date</dd></div>
+        </dl>
+      </article>
+    </div>
+  </section>
+
+  <!-- ========================================================= VANESSA -->
+  <section style="--own: var(--vanessa)">
+    <div class="sec-head">
+      <i class="owner-dot"></i>
+      <h2>Vanessa</h2>
+      <p>Accounts hold what you have; transactions record what moved; snapshots are the history runway is derived from.</p>
+    </div>
+
+    <div class="stores">
+      <div class="stores two">
+        <article class="store">
+          <div class="store-head">
+            <h3 class="store-name">accounts</h3>
+            <span class="store-count">8 fields · 2 indexes</span>
+          </div>
+          <dl class="fields">
+            <div class="f pk"><dt>id</dt><dd class="ty">string</dd></div>
+            <div class="f idx"><dt>name</dt><dd class="ty">string</dd></div>
+            <div class="f"><dt>goal</dt><dd class="ty">string</dd>
+              <dd class="ref">what the money is for &mdash; accounts are earmarked, not one pool</dd></div>
+            <div class="f"><dt>balance</dt><dd class="ty">number</dd></div>
+            <div class="f"><dt>currency</dt><dd class="ty">"GBP"</dd></div>
+            <div class="f idx"><dt>updatedAt</dt><dd class="ty">ISO date</dd>
+              <dd class="ref">drives the stale state on the account card</dd></div>
+            <div class="f"><dt>createdAt</dt><dd class="ty">ISO date</dd></div>
+            <div class="f"><dt>modifiedAt</dt><dd class="ty">ISO date</dd></div>
+          </dl>
+        </article>
+
+        <article class="store">
+          <div class="store-head">
+            <h3 class="store-name">transactions</h3>
+            <span class="store-count">8 fields · 5 indexes</span>
+          </div>
+          <dl class="fields">
+            <div class="f pk"><dt>id</dt><dd class="ty">string</dd></div>
+            <div class="f idx"><dt>type</dt><dd class="ty">TransactionType</dd></div>
+            <div class="f"><dt>amount</dt><dd class="ty">number</dd></div>
+            <div class="f idx"><dt>category</dt><dd class="ty">string</dd></div>
+            <div class="f idx"><dt>accountId</dt><dd class="ty">string | null</dd>
+              <dd class="ref">references <b>accounts.id</b> &mdash; set, the account balance moves too</dd></div>
+            <div class="f"><dt>note</dt><dd class="ty">string</dd></div>
+            <div class="f idx"><dt>occurredAt</dt><dd class="ty">ISO date</dd></div>
+            <div class="f idx"><dt>modifiedAt</dt><dd class="ty">ISO date</dd></div>
+          </dl>
+        </article>
+      </div>
+
+      <article class="store">
+        <div class="store-head">
+          <h3 class="store-name">balanceSnapshots</h3>
+          <span class="store-count">5 fields · 2 indexes</span>
+        </div>
+        <p class="store-note">
+          Runway is computed from this history rather than from logged expenses. Logging spend
+          is optional, so anything load-bearing built on it would quietly mislead the moment
+          you stopped.
+        </p>
+        <dl class="fields">
+          <div class="f pk"><dt>id</dt><dd class="ty">string</dd></div>
+          <div class="f idx"><dt>accountId</dt><dd class="ty">string</dd>
+            <dd class="ref">references <b>accounts.id</b></dd></div>
+          <div class="f"><dt>balance</dt><dd class="ty">number</dd></div>
+          <div class="f idx"><dt>recordedAt</dt><dd class="ty">ISO date</dd></div>
+          <div class="f"><dt>modifiedAt</dt><dd class="ty">ISO date</dd></div>
+        </dl>
+      </article>
+    </div>
+  </section>
+
+  <!-- =========================================================== MARCO -->
+  <section style="--own: var(--marco)">
+    <div class="sec-head">
+      <i class="owner-dot"></i>
+      <h2>Marco</h2>
+      <p>The only agent without a table of his own. Workouts still sit in the generic capture table Jarvis writes to.</p>
+    </div>
+
+    <div class="stores">
+      <article class="store">
+        <div class="store-head">
+          <h3 class="store-name">captures</h3>
+          <span class="store-count">12 fields · 3 indexes</span>
+        </div>
+        <p class="store-note">
+          The landing pad for anything spoken. Expenses and events have since been migrated
+          out to their own tables, so in practice only <code>workout</code> rows remain here.
+          Most fields are optional because the parser returns null rather than guessing.
+        </p>
+        <dl class="fields">
+          <div class="f pk"><dt>id</dt><dd class="ty">string</dd></div>
+          <div class="f idx"><dt>kind</dt><dd class="ty">CaptureKind</dd></div>
+          <div class="f idx"><dt>agent</dt><dd class="ty">AgentId</dd></div>
+          <div class="f"><dt>raw</dt><dd class="ty">string</dd>
+            <dd class="ref">what you actually said, kept verbatim so a mis-parse is recoverable</dd></div>
+          <div class="f"><dt>label</dt><dd class="ty">string</dd></div>
+          <div class="f"><dt>amount</dt><dd class="ty">number?</dd></div>
+          <div class="f"><dt>currency</dt><dd class="ty">string?</dd></div>
+          <div class="f"><dt>account</dt><dd class="ty">string | null?</dd></div>
+          <div class="f"><dt>durationMinutes</dt><dd class="ty">number | null?</dd></div>
+          <div class="f"><dt>scheduledFor</dt><dd class="ty">ISO date | null?</dd></div>
+          <div class="f idx"><dt>capturedAt</dt><dd class="ty">ISO date</dd></div>
+          <div class="f"><dt>modifiedAt</dt><dd class="ty">ISO date</dd></div>
+        </dl>
+      </article>
+    </div>
+  </section>
+
+  <!-- ========================================================== SYSTEM -->
+  <section style="--own: var(--sys)">
+    <div class="sec-head">
+      <i class="owner-dot"></i>
+      <h2>System</h2>
+      <p>No agent owns these. One is deliberately device-local; the other exists so a deletion can travel.</p>
+    </div>
+
+    <div class="stores two">
+      <article class="store">
+        <div class="store-head">
+          <h3 class="store-name">settings</h3>
+          <span class="store-count">2 fields · no index</span>
+        </div>
+        <p class="store-note">
+          The only store keyed by something other than <code>id</code>. Holds the monthly limit,
+          locale, currency and your API keys &mdash; which is exactly why it is excluded from
+          backups and never travels between devices.
+        </p>
+        <dl class="fields">
+          <div class="f pk"><dt>key</dt><dd class="ty">string</dd></div>
+          <div class="f"><dt>value</dt><dd class="ty">string</dd></div>
+        </dl>
+      </article>
+
+      <article class="store">
+        <div class="store-head">
+          <h3 class="store-name">deletions</h3>
+          <span class="store-count">3 fields · 2 indexes</span>
+        </div>
+        <p class="store-note">
+          Tombstones. Without them, &ldquo;deleted on the phone&rdquo; and &ldquo;not yet created
+          on the laptop&rdquo; look identical, and any merge would resurrect what you threw away.
+        </p>
+        <dl class="fields">
+          <div class="f pk"><dt>id</dt><dd class="ty">the deleted record's id</dd></div>
+          <div class="f idx"><dt>table</dt><dd class="ty">string</dd></div>
+          <div class="f idx"><dt>deletedAt</dt><dd class="ty">ISO date</dd></div>
+        </dl>
+      </article>
+    </div>
+  </section>
+
+  <!-- ============================================================ SYNC -->
+  <section>
+    <div class="sec-head">
+      <h2>What makes a future sync possible</h2>
+    </div>
+    <div class="prose">
+      <p>
+        Nothing syncs today, but the scaffolding for it is already in every write. Two Dexie
+        hooks stamp <code>modifiedAt</code> on create and on update across all eight synced
+        tables, so no call site can forget the way a manual assignment can. A no-op update is
+        left alone, so it does not look like a change to a peer that isn't there yet.
+      </p>
+      <p>
+        Eight tables carry that stamp and travel in a backup: <code>applications</code>,
+        <code>cvVariants</code>, <code>claims</code>, <code>captures</code>, <code>tasks</code>,
+        <code>accounts</code>, <code>balanceSnapshots</code> and <code>transactions</code>.
+        <strong>settings</strong> is excluded by design and <strong>deletions</strong> is the
+        tombstone log itself.
+      </p>
+      <p>
+        Only three tables index <code>modifiedAt</code> &mdash; applications, transactions and
+        tasks &mdash; because those are the ones an export walks most often. The rest carry the
+        field without the index, which costs nothing on write.
+      </p>
+    </div>
+  </section>
+
+  <!-- ====================================================== MIGRATIONS -->
+  <section>
+    <div class="sec-head">
+      <h2>How the schema got here</h2>
+      <p>Six versions. Two of them moved existing records rather than only adding stores.</p>
+    </div>
+
+    <div class="versions">
+      <div class="v">
+        <div class="v-num">v1</div>
+        <div class="v-body">
+          <h3><code>applications</code>, <code>cvVariants</code>, <code>claims</code></h3>
+          <p>Tony first: the agent the whole app was built to serve.</p>
+        </div>
+      </div>
+      <div class="v">
+        <div class="v-num">v2</div>
+        <div class="v-body">
+          <h3><code>captures</code></h3>
+          <p>A single landing pad, so voice could work before any agent had a screen of its own.</p>
+        </div>
+      </div>
+      <div class="v">
+        <div class="v-num">v3</div>
+        <div class="v-body">
+          <h3><code>tasks</code> <span class="moved">moved data</span></h3>
+          <p>
+            Every capture with <code>kind: "event"</code> became a real task and was deleted from
+            captures, so nothing you had already spoken silently vanished when Lisa got a surface.
+          </p>
+        </div>
+      </div>
+      <div class="v">
+        <div class="v-num">v4</div>
+        <div class="v-body">
+          <h3><code>accounts</code>, <code>balanceSnapshots</code></h3>
+          <p>The balance loop, and the history runway needs.</p>
+        </div>
+      </div>
+      <div class="v">
+        <div class="v-num">v5</div>
+        <div class="v-body">
+          <h3><code>transactions</code>, <code>settings</code> <span class="moved">moved data</span></h3>
+          <p>
+            Same again for money: captures with <code>kind: "expense"</code> became transactions
+            rather than being stranded in a list nothing read.
+          </p>
+        </div>
+      </div>
+      <div class="v">
+        <div class="v-num">v6</div>
+        <div class="v-body">
+          <h3><code>deletions</code>, plus <code>modifiedAt</code> indexes</h3>
+          <p>
+            Tombstones and change stamps. Added before there was a sync to use them, because
+            backfilling months of records later is far more expensive than stamping them now.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================================================== ENUMS -->
+  <section>
+    <div class="sec-head">
+      <h2>Enumerations</h2>
+      <p>The closed value sets the stores above refer to.</p>
+    </div>
+
+    <div class="enums">
+      <div class="enum" style="--own: var(--tony)">
+        <h3>ApplicationStage</h3>
+        <div class="vals">
+          <code>applied</code><code>recruiter_screen</code><code>interviewed</code><code>final_stage</code><code>offer</code><code>rejected</code><code>withdrawn</code>
+        </div>
+      </div>
+      <div class="enum" style="--own: var(--tony)">
+        <h3>LifecycleStatus</h3>
+        <div class="vals">
+          <code>active</code><code>stale</code><code>presumed_closed</code>
+        </div>
+      </div>
+      <div class="enum" style="--own: var(--lisa)">
+        <h3>TaskKind</h3>
+        <div class="vals">
+          <code>one_off</code><code>daily</code><code>monthly</code><code>milestone</code>
+        </div>
+      </div>
+      <div class="enum" style="--own: var(--vanessa)">
+        <h3>TransactionType</h3>
+        <div class="vals"><code>income</code><code>expense</code></div>
+      </div>
+      <div class="enum" style="--own: var(--marco)">
+        <h3>CaptureKind</h3>
+        <div class="vals"><code>expense</code><code>workout</code><code>event</code></div>
+      </div>
+      <div class="enum" style="--own: var(--jarvis)">
+        <h3>AgentId</h3>
+        <div class="vals">
+          <code>jarvis</code><code>tony</code><code>lisa</code><code>vanessa</code><code>marco</code>
+        </div>
+      </div>
+      <div class="enum" style="--own: var(--vanessa)">
+        <h3>SPEND_CATEGORIES</h3>
+        <div class="vals">
+          <code>Groceries</code><code>Eating out</code><code>Transport</code><code>Rent</code><code>Bills</code><code>Shopping</code><code>Health</code><code>Entertainment</code><code>Travel</code><code>Subscriptions</code><code>Other</code>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Dexie reports schema version 6; IndexedDB stores it as 60, because Dexie multiplies by ten
+    to leave room for sub-versions. The database is named <code>all-for-one</code> and is scoped
+    to the browser origin, so every install starts with its own empty copy and no user's data
+    can reach another's. Structure read directly from a running browser, not from the source.
+  </footer>
+
+</div>

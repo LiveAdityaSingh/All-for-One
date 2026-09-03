@@ -3,6 +3,7 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { useState } from "react";
 import { db } from "@/lib/db";
+import { useAgentName } from "@/lib/use-agent-names";
 import { nanoid } from "@/lib/id";
 import type { Claim } from "@/lib/types";
 
@@ -10,6 +11,7 @@ import type { Claim } from "@/lib/types";
 // entered once and explicitly confirmed. Tony's CV suggestions may only
 // ever draw from claims marked confirmed here.
 export default function ClaimsPage() {
+  const name = useAgentName("tony");
   const claims = useLiveQuery(() => db.claims.toArray(), []);
   const [text, setText] = useState("");
 
@@ -37,7 +39,7 @@ export default function ClaimsPage() {
       </h1>
       <p className="text-sm text-foreground-muted">
         Only confirmed claims can be used in CV suggestions. Nothing here is invented for you -
-        add it once, confirm it&apos;s true, and Tony can reuse it.
+        add it once, confirm it&apos;s true, and {name} can reuse it.
       </p>
 
       <form onSubmit={addClaim} className="flex gap-2">

@@ -2,11 +2,13 @@
 
 import type { Runway } from "@/lib/finance";
 import { useMoney } from "@/lib/use-money";
+import { useAgentName } from "@/lib/use-agent-names";
 
 // The killer number (build spec §8): it needs no bank connection, it is
 // the most emotionally loaded figure in a job seeker's life, and it is the
 // bridge from the acquisition wedge to the retention layer.
 export function RunwayCard({ runway }: { runway: Runway }) {
+  const name = useAgentName("vanessa");
   const { formatMoneyRounded } = useMoney();
   // Staleness desaturates. Colour means "I know this"; grey means
   // "don't trust me here" (build spec §4).
@@ -53,7 +55,7 @@ export function RunwayCard({ runway }: { runway: Runway }) {
 
       {runway.state === "insufficient_history" && (
         <p className="mt-1 text-xs text-foreground-muted">
-          Update your balances for a week or so and Vanessa can work out your burn rate.
+          Update your balances for a week or so and {name} can work out your burn rate.
         </p>
       )}
 

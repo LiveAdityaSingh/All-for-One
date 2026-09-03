@@ -4,6 +4,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { useState } from "react";
 import { ChatInputBar } from "@/components/chat-input-bar";
 import { db } from "@/lib/db";
+import { useAgentName } from "@/lib/use-agent-names";
 import { softDelete } from "@/lib/backup";
 import { addTask, isDoneForNow, isOverdue, toggleTask } from "@/lib/tasks";
 import { TASK_KIND_LABELS, type Task, type TaskKind } from "@/lib/types";
@@ -67,6 +68,7 @@ function TaskRow({ task }: { task: Task }) {
 }
 
 export default function LisaPage() {
+  const name = useAgentName("lisa");
   const tasks = useLiveQuery(() => db.tasks.orderBy("createdAt").reverse().toArray(), []);
   const [title, setTitle] = useState("");
   const [kind, setKind] = useState<TaskKind>("one_off");
@@ -88,7 +90,7 @@ export default function LisaPage() {
       <div className="flex items-baseline justify-between px-4">
         <h1 className="agent-text-glow text-lg font-semibold"
           style={{ color: "var(--color-lisa)", ["--glow" as string]: "var(--color-lisa)" }}>
-          Lisa
+          {name}
         </h1>
         {/* Open loops shown as a persistent count (build spec §11). */}
         {open.length > 0 && (

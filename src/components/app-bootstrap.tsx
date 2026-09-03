@@ -3,17 +3,20 @@
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { scheduleDailyDigest } from "@/lib/notifications";
+import { useAgentNamesStore } from "@/store/agent-names-store";
 import { useCurrencyStore } from "@/store/currency-store";
 
 // One place for the work that has to happen once per launch, before the
 // user does anything.
 export function AppBootstrap() {
   const syncCurrency = useCurrencyStore((s) => s.sync);
+  const syncAgentNames = useAgentNamesStore((s) => s.sync);
 
   useEffect(() => {
     // Reading localStorage here rather than during render keeps the first
     // client render identical to the build-time HTML.
     syncCurrency();
+    syncAgentNames();
 
     // This app has no server, so the browser holds the only copy. Persistent
     // storage is exempt from the automatic eviction that otherwise clears
@@ -37,7 +40,7 @@ export function AppBootstrap() {
     if (Capacitor.isNativePlatform()) {
       void scheduleDailyDigest();
     }
-  }, [syncCurrency]);
+  }, [syncCurrency, syncAgentNames]);
 
   return null;
 }

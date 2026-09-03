@@ -4,6 +4,7 @@
 // genuine reasoning escalates to a frontier model, which is what keeps
 // the unit economics viable at a subscription price.
 import type { AgentId } from "@/lib/types";
+import { getAgentNames, normaliseAgentName, resolveAgent } from "@/lib/agent-names";
 import { formatMoney, type CurrencyCode } from "@/lib/locale";
 import { extractDurationMinutes, extractMoney, extractWhen } from "./extract";
 import {
@@ -80,6 +81,17 @@ export interface QuestionIntent {
   topic: QuestionTopic;
 }
 
+// Renaming an agent is said to the home chat rather than only being
+// buried in Settings, because the whole product assumes you can just talk
+// to it. It resolves an agent by whatever you call it now, by the shipped
+// default, or by its original character name.
+export interface RenameIntent {
+  type: "rename_agent";
+  agent: "jarvis";
+  target: AgentId;
+  name: string;
+}
+
 export interface UnhandledIntent {
   type: "unhandled";
   agent: null;
@@ -94,9 +106,13 @@ export type ParsedIntent =
   | ScheduleIntent
   | SetBalanceIntent
   | QuestionIntent
+  | RenameIntent
   | UnhandledIntent;
 
-export type CaptureIntent = Exclude<ParsedIntent, UnhandledIntent | QuestionIntent>;
+export type CaptureIntent = Exclude<
+  ParsedIntent,
+  UnhandledIntent | QuestionIntent | RenameIntent
+>;
 
 function containsAny(text: string, words: string[]): boolean {
   return words.some((word) => new RegExp(`\\b${word}\\b`, "i").test(text));
@@ -313,11 +329,49 @@ function parseSetBalance(text: string): SetBalanceIntent | null {
   return null;
 }
 
+// A rename only ever fires when the thing being renamed actually resolves
+// to an agent. That guard is what makes the loose "call X Y" phrasing safe
+// to accept at all: "call the plumber at 5pm" tries every split of "plumber
+// at 5pm", resolves none of them to an agent, and falls through to Lisa.
+function parseRename(text: string): RenameIntent | null {
+  const names = getAgentNames();
+  const cleaned = text.replace(/[.!?]+$/, "").trim();
+
+  // "rename job to Tony", "change the finances tab's name to Vanessa"
+  const explicit = cleaned.match(
+    /^(?:please\s+)?(?:rename|re-name|change|set)\s+(?:the\s+|my\s+)?(.+?)(?:\s+(?:agent|tab|screen|page))?(?:'s)?(?:\s+name)?\s+to\s+(.+)$/i,
+  );
+  if (explicit) {
+    const target = resolveAgent(explicit[1], names);
+    const name = normaliseAgentName(explicit[2]);
+    if (target && name) return { type: "rename_agent", agent: "jarvis", target, name };
+  }
+
+  // "call health Marco", "name the job agent Applications"
+  const verb = cleaned.match(/^(?:please\s+)?(?:call|name)\s+(?:the\s+|my\s+)?(.+)$/i);
+  if (verb) {
+    const words = verb[1].split(/\s+/);
+    for (let i = 1; i < words.length; i++) {
+      const left = words.slice(0, i).join(" ").replace(/\s+(?:agent|tab|screen|page)$/i, "");
+      const target = resolveAgent(left, names);
+      if (!target) continue;
+      // "name the daily agent Today" splits before "agent", so the noun has
+      // to come off whichever side of the split it landed on.
+      const rest = words.slice(i).join(" ").replace(/^(?:agent|tab|screen|page)\s+/i, "");
+      const name = normaliseAgentName(rest);
+      if (name) return { type: "rename_agent", agent: "jarvis", target, name };
+    }
+  }
+
+  return null;
+}
+
 // Ordered most-specific first: questions are checked before any capture so
 // "how much have I spent" is never logged as an expense, and an utterance
 // naming a company and a role is an application even though "for" also
 // appears in expense phrasing.
 const PARSERS = [
+  parseRename,
   parseQuestion,
   parseApplication,
   parseIncome,
