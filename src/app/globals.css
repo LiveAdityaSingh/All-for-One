@@ -157,6 +157,38 @@ body {
   padding-bottom: calc(var(--tab-bar-h) + 1rem);
 }
 
+/*
+ * The microphone is live and recording right now. This is the only element
+ * in the app allowed to pulse: it answers "is it actually hearing me?",
+ * which nothing else on the screen can, and on an agent screen there is no
+ * orb to answer it either.
+ */
+@keyframes mic-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 0 color-mix(in oklch, var(--glow) 60%, transparent),
+      0 0 16px 2px color-mix(in oklch, var(--glow) 70%, transparent);
+  }
+  50% {
+    box-shadow:
+      0 0 0 8px color-mix(in oklch, var(--glow) 0%, transparent),
+      0 0 30px 7px color-mix(in oklch, var(--glow) 95%, transparent);
+  }
+}
+
+.mic-live {
+  animation: mic-pulse 1.5s ease-in-out infinite;
+}
+
+/* Reduced motion still needs the answer, just without the throb. */
+@media (prefers-reduced-motion: reduce) {
+  .mic-live {
+    animation: none;
+    box-shadow: 0 0 28px 5px color-mix(in oklch, var(--glow) 85%, transparent);
+  }
+}
+
 .agent-text-glow {
   text-shadow: 0 0 22px color-mix(in oklch, var(--glow) 45%, transparent);
 }
