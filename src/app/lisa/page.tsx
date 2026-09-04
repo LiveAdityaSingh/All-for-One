@@ -7,6 +7,8 @@ import { db } from "@/lib/db";
 import { useAgentName } from "@/lib/use-agent-names";
 import { useHasMounted } from "@/lib/use-has-mounted";
 import { canHandOff, handoffFor, openHandoff } from "@/lib/handoff";
+import { MAX_SCHEDULED } from "@/lib/reminders";
+import { Capacitor } from "@capacitor/core";
 import { softDelete } from "@/lib/backup";
 import { addTask, isDoneForNow, isOverdue, toggleTask } from "@/lib/tasks";
 import { TASK_KIND_LABELS, type Task, type TaskKind } from "@/lib/types";
@@ -91,6 +93,18 @@ function TaskRow({ task }: { task: Task }) {
 function AlarmNote() {
   const hasMounted = useHasMounted();
   if (!hasMounted) return null;
+
+  // The installed app can schedule a real alert; a web page cannot, which
+  // is the whole reason the clock-app handoff exists.
+  if (Capacitor.isNativePlatform()) {
+    return (
+      <p className="px-4 text-xs text-foreground-muted">
+        Dated reminders alert you at the time you set, even with the app closed.
+        The nearest {MAX_SCHEDULED} are kept scheduled; anything further out is
+        picked up later.
+      </p>
+    );
+  }
 
   return (
     <p className="px-4 text-xs text-foreground-muted">
