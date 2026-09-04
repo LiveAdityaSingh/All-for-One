@@ -45,6 +45,9 @@ interface SpeechRecognitionLike extends EventTarget {
   lang: string;
   interimResults: boolean;
   start: () => void;
+  // Ends the session and lets onend fire, unlike abort() which discards
+  // anything already heard.
+  stop: () => void;
   onresult: ((event: SpeechRecognitionResultLike) => void) | null;
   onerror: (() => void) | null;
   onend: (() => void) | null;
@@ -84,6 +87,9 @@ export function ChatInputBar({ variant, placeholder }: ChatInputBarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const setOrbState = useOrbStore((s) => s.setState);
+  // The mic has to show that it is recording. Until now the only thing that
+  // changed on a tap was the orb, which is absent on every agent screen.
+  const listening = useOrbStore((s) => s.state === "listening");
   const offerUndo = useUndoStore((s) => s.offer);
   const clearUndo = useUndoStore((s) => s.clear);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
@@ -155,6 +161,15 @@ export function ChatInputBar({ variant, placeholder }: ChatInputBarProps) {
   }
 
   function handleMic() {
+    // A button that is visibly recording invites a second tap to stop it,
+    // and without this that tap would start a second recogniser on top of
+    // the first.
+    if (useOrbStore.getState().state === "listening") {
+      recognitionRef.current?.stop();
+      setOrbState("idle");
+      return;
+    }
+
     const recognition = getSpeechRecognition();
     if (!recognition) {
       setFeedback("Voice input isn't supported in this browser.");
@@ -223,12 +238,27 @@ export function ChatInputBar({ variant, placeholder }: ChatInputBarProps) {
         <button
           type="button"
           onClick={handleMic}
-          aria-label="Voice input"
-          className="flex h-9 w-9 items-center justify-center rounded-full"
-          style={{ backgroundColor: accentColor ?? "var(--color-jarvis-muted)" }}
+          aria-label={listening ? "Stop voice input" : "Voice input"}
+          aria-pressed={listening}
+          className={`flex h-9 w-9 items-center justify-center rounded-full transition-transform ${
+            listening ? "mic-live scale-110" : ""
+          }`}
+          style={{
+            // Live, it goes to full chroma so the change reads even before
+            // the glow is noticed - on an agent screen it is muted at rest.
+            backgroundColor: listening
+              ? "var(--color-jarvis)"
+              : (accentColor ?? "var(--color-jarvis-muted)"),
+            ["--glow" as string]: "var(--color-jarvis)",
+          }}
         >
           <MicIcon />
         </button>
+
+        {/* Announced rather than drawn: the glow is the visual answer. */}
+        <span className="sr-only" role="status" aria-live="polite">
+          {listening ? "Listening" : ""}
+        </span>
         {variant === "agent" && (
           <span
             aria-hidden
