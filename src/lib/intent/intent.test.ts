@@ -354,3 +354,61 @@ describe("remembering which currency was spoken", () => {
     });
   });
 });
+
+describe("sleep and meals", () => {
+  it("reads a night's sleep", () => {
+    expect(classifyUtterance("slept 7 hours")).toMatchObject({
+      type: "log_sleep",
+      agent: "marco",
+      durationMinutes: 420,
+    });
+    expect(classifyUtterance("got 6 hours of sleep last night")).toMatchObject({
+      type: "log_sleep",
+      durationMinutes: 360,
+    });
+  });
+
+  // A sleep word without a number is a mood, not a measurement.
+  it("ignores sleep talk with no duration", () => {
+    expect(classifyUtterance("slept badly").type).not.toBe("log_sleep");
+    expect(classifyUtterance("I need sleep").type).not.toBe("log_sleep");
+  });
+
+  it("reads a meal", () => {
+    expect(classifyUtterance("ate chicken and rice")).toMatchObject({
+      type: "log_meal",
+      agent: "marco",
+      description: "chicken and rice",
+    });
+    expect(classifyUtterance("had a salad for lunch")).toMatchObject({
+      type: "log_meal",
+      description: "a salad",
+    });
+  });
+
+  // The dangerous ones: "had" is a very common verb.
+  it("never files an appointment or a purchase as a meal", () => {
+    expect(classifyUtterance("had a call with Acme").type).not.toBe("log_meal");
+    expect(classifyUtterance("had an interview at Monzo").type).not.toBe("log_meal");
+    expect(classifyUtterance("had 20 quid of petrol").type).not.toBe("log_meal");
+    expect(classifyUtterance("spent 12 quid on lunch").type).toBe("log_expense");
+  });
+});
+
+// This regex was dead for months: an earlier edit emitted its word
+// boundaries as literal backspace characters, so "balance" was never
+// stripped and the account name only matched by luck, through the fuzzy
+// fallback in applyBalance.
+describe("spoken balance updates name the account cleanly", () => {
+  it("strips the word balance from the account name", () => {
+    expect(classifyUtterance("Monzo balance is 1200")).toMatchObject({
+      type: "set_balance",
+      accountName: "Monzo",
+      amount: 1200,
+    });
+    expect(classifyUtterance("monzo is 1200")).toMatchObject({
+      type: "set_balance",
+      accountName: "monzo",
+    });
+  });
+});

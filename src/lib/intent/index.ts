@@ -54,6 +54,23 @@ export interface WorkoutIntent {
   durationMinutes: number | null;
 }
 
+// Sleep is one number a night and the strongest single signal Marco has,
+// so it gets its own intent rather than being filed as a workout.
+export interface SleepIntent {
+  type: "log_sleep";
+  agent: "marco";
+  durationMinutes: number;
+}
+
+// Meals are recorded as what you said you ate, not parsed into nutrients:
+// the app has no food database, and inventing calorie numbers would be
+// worse than honestly recording "chicken and rice".
+export interface MealIntent {
+  type: "log_meal";
+  agent: "marco";
+  description: string;
+}
+
 export interface ScheduleIntent {
   type: "schedule_event";
   agent: "lisa";
@@ -103,6 +120,8 @@ export type ParsedIntent =
   | ExpenseIntent
   | IncomeIntent
   | WorkoutIntent
+  | SleepIntent
+  | MealIntent
   | ScheduleIntent
   | SetBalanceIntent
   | QuestionIntent
@@ -321,12 +340,47 @@ function parseSetBalance(text: string): SetBalanceIntent | null {
     const amount = Number(match[2].replace(/,/g, ""));
     if (!Number.isFinite(amount)) continue;
 
-    const accountName = match[1].replace(/balance/i, "").trim();
+    const accountName = match[1].replace(/\bbalance\b/i, "").trim();
     if (!accountName) continue;
 
     return { type: "set_balance", agent: "vanessa", accountName, amount };
   }
   return null;
+}
+
+// "slept 7 hours", "7 hours of sleep", "got 6h30 last night". Requires an
+// explicit sleep word AND a duration: a bare "7 hours" could be anything,
+// and a bare "slept badly" is not a measurement.
+const SLEEP_WORDS = /\b(slept|sleep|kip|nap|napped)\b/i;
+
+function parseSleep(text: string): SleepIntent | null {
+  if (!SLEEP_WORDS.test(text)) return null;
+  const durationMinutes = extractDurationMinutes(text);
+  if (durationMinutes === null || durationMinutes <= 0) return null;
+  // A "nap" of nine hours is a night's sleep mis-heard; either way the
+  // number is what matters, so nothing is rejected on length.
+  return { type: "log_sleep", agent: "marco", durationMinutes };
+}
+
+// "ate chicken and rice", "had a salad for lunch". The verb has to be
+// there and has to lead: "I had a call with Acme" is not a meal, so the
+// verb must be followed by something that is not obviously another agent's
+// business.
+const MEAL_VERBS = /^(?:i\s+)?(?:ate|eaten|had|having|eating)\s+(.+)$/i;
+const NOT_FOOD = /\b(call|meeting|interview|chat|word|look|think|thought|go|problem|issue|idea)\b/i;
+
+function parseMeal(text: string): MealIntent | null {
+  const cleaned = text.replace(/[.!?]+$/, "").trim();
+  const match = cleaned.match(MEAL_VERBS);
+  if (!match) return null;
+
+  const what = match[1].trim();
+  if (!what || NOT_FOOD.test(what)) return null;
+  // "had 20 quid of petrol" is Vanessa's, not Marco's.
+  if (extractMoney(what)?.amount != null) return null;
+
+  const description = what.replace(/\s+for\s+(breakfast|lunch|dinner|tea|supper)$/i, "").trim();
+  return { type: "log_meal", agent: "marco", description: description || what };
 }
 
 // A rename only ever fires when the thing being renamed actually resolves
@@ -376,6 +430,8 @@ const PARSERS = [
   parseApplication,
   parseIncome,
   parseExpense,
+  parseSleep,
+  parseMeal,
   parseWorkout,
   parseSetBalance,
   parseSchedule,
@@ -402,6 +458,12 @@ export function describeIntent(intent: CaptureIntent): string {
     case "log_expense":
       return `Logged ${formatMoney(intent.amount)} on ${intent.merchant}` +
         (intent.account ? ` (${intent.account})` : "");
+    case "log_sleep":
+      return `Logged ${Math.floor(intent.durationMinutes / 60)}h ${
+        intent.durationMinutes % 60
+      }m sleep`.replace(" 0m", "");
+    case "log_meal":
+      return `Logged ${intent.description}`;
     case "log_workout":
       return `Logged ${intent.activity}` +
         (intent.durationMinutes ? ` - ${intent.durationMinutes} min` : "");
@@ -420,6 +482,8 @@ export const AGENT_FOR_INTENT: Record<CaptureIntent["type"], AgentId> = {
   log_expense: "vanessa",
   log_income: "vanessa",
   log_workout: "marco",
+  log_sleep: "marco",
+  log_meal: "marco",
   schedule_event: "lisa",
   set_balance: "vanessa",
 };
