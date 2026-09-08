@@ -14,10 +14,39 @@ import { canHandOff, handoffFor, openHandoff } from "@/lib/handoff";
 import { MAX_SCHEDULED } from "@/lib/reminders";
 import { Capacitor } from "@capacitor/core";
 import { softDelete } from "@/lib/backup";
-import { addTask, isDoneForNow, isOverdue, toggleTask } from "@/lib/tasks";
-import { TASK_KIND_LABELS, type Task, type TaskKind } from "@/lib/types";
+import { addTask, appliesOn, doneToday, isDoneForNow, isOverdue, timesPerDay, toggleTask } from "@/lib/tasks";
+import {
+  TASK_KIND_LABELS,
+  TASK_KIND_PICKER_LABELS,
+  WEEKDAY_LABELS,
+  WEEKDAY_NAMES,
+  type Task,
+  type TaskKind,
+} from "@/lib/types";
 
-const KINDS: TaskKind[] = ["one_off", "daily", "monthly", "milestone"];
+const KINDS: TaskKind[] = ["one_off", "habit", "daily", "monthly", "milestone"];
+
+// "Habit" on its own says nothing about the rhythm you chose, so the row
+// spells it back: which days, and how far through today you are.
+function describeRhythm(task: Task, now = new Date()): string {
+  const parts = [TASK_KIND_LABELS[task.kind]];
+
+  if (task.kind === "habit") {
+    const days = task.weekdays;
+    if (days && days.length > 0 && days.length < 7) {
+      parts.push([...days].sort().map((d) => WEEKDAY_NAMES[d].slice(0, 3)).join(", "));
+    } else {
+      parts.push("every day");
+    }
+
+    const target = timesPerDay(task);
+    if (target > 1) parts.push(`${doneToday(task, now)} of ${target} today`);
+    else if (!appliesOn(task, now)) parts.push("not today");
+  }
+
+  if (task.dueAt) parts.push(new Date(task.dueAt).toLocaleString());
+  return parts.join(" · ");
+}
 
 function TaskRow({ task }: { task: Task }) {
   const done = isDoneForNow(task);
@@ -41,10 +70,19 @@ function TaskRow({ task }: { task: Task }) {
           backgroundColor: done ? "var(--color-lisa)" : "transparent",
         }}
       >
-        {done && (
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth={4}>
-            <path d="M4 12l6 6L20 5" />
-          </svg>
+        {task.kind === "habit" && timesPerDay(task) > 1 ? (
+          <span
+            className="text-[10px] font-semibold tabular-nums"
+            style={{ color: done ? "var(--background)" : "var(--color-lisa)" }}
+          >
+            {doneToday(task)}
+          </span>
+        ) : (
+          done && (
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="black" strokeWidth={4}>
+              <path d="M4 12l6 6L20 5" />
+            </svg>
+          )
         )}
       </button>
 
@@ -55,10 +93,7 @@ function TaskRow({ task }: { task: Task }) {
           onSave={(title) => db.tasks.update(task.id, { title })}
           className={`text-sm ${done ? "text-foreground-muted line-through" : ""}`}
         />
-        <p className="text-xs text-foreground-muted">
-          {TASK_KIND_LABELS[task.kind]}
-          {task.dueAt && ` - ${new Date(task.dueAt).toLocaleString()}`}
-        </p>
+        <p className="text-xs text-foreground-muted">{describeRhythm(task)}</p>
       </div>
 
       {/* Severity is structural, never a hue: hue is spoken for by agent
@@ -127,13 +162,22 @@ export default function LisaPage() {
   const [title, setTitle] = useState("");
   const [kind, setKind] = useState<TaskKind>("one_off");
   const [due, setDue] = useState("");
+  // Habit rhythm. Empty weekdays means every day, which is the sensible
+  // reading of "I did not narrow it down".
+  const [weekdays, setWeekdays] = useState<number[]>([]);
+  const [times, setTimes] = useState(1);
 
   async function handleAdd(event: React.FormEvent) {
     event.preventDefault();
     if (!title.trim()) return;
-    await addTask(title, kind, due ? new Date(due) : null);
+    await addTask(title, kind, due ? new Date(due) : null, {
+      weekdays: weekdays.length > 0 ? [...weekdays].sort() : null,
+      timesPerDay: times,
+    });
     setTitle("");
     setDue("");
+    setWeekdays([]);
+    setTimes(1);
   }
 
   const open = tasks?.filter((t) => !isDoneForNow(t)) ?? [];
@@ -171,7 +215,7 @@ export default function LisaPage() {
           >
             {KINDS.map((k) => (
               <option key={k} value={k}>
-                {TASK_KIND_LABELS[k]}
+                {TASK_KIND_PICKER_LABELS[k]}
               </option>
             ))}
           </select>
@@ -189,6 +233,58 @@ export default function LisaPage() {
             Add
           </button>
         </div>
+
+        {/* Only a habit has a rhythm to describe, so the controls for one
+            appear only when you are making one. */}
+        {kind === "habit" && (
+          <div className="flex flex-col gap-2 rounded-lg border border-border bg-background-elevated p-3">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs text-foreground-muted">
+                Which days {weekdays.length === 0 && "· every day unless you pick some"}
+              </span>
+              <div className="flex gap-1.5">
+                {WEEKDAY_LABELS.map((label, day) => {
+                  const on = weekdays.includes(day);
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      aria-pressed={on}
+                      aria-label={WEEKDAY_NAMES[day]}
+                      onClick={() =>
+                        setWeekdays((current) =>
+                          current.includes(day)
+                            ? current.filter((d) => d !== day)
+                            : [...current, day],
+                        )
+                      }
+                      className="h-9 flex-1 rounded-lg border text-xs font-medium"
+                      style={{
+                        borderColor: on ? "var(--color-lisa)" : "var(--border)",
+                        color: on ? "var(--background)" : "var(--foreground-muted)",
+                        backgroundColor: on ? "var(--color-lisa)" : "transparent",
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <label className="flex items-center justify-between gap-2">
+              <span className="text-xs text-foreground-muted">Times a day</span>
+              <input
+                type="number"
+                min={1}
+                max={12}
+                value={times}
+                onChange={(e) => setTimes(Math.max(1, Math.min(12, Number(e.target.value) || 1)))}
+                className="w-16 rounded-lg border border-border bg-background px-2 py-1 text-right text-sm"
+              />
+            </label>
+          </div>
+        )}
       </form>
 
       {open.length === 0 && done.length === 0 && (
