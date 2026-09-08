@@ -151,10 +151,42 @@ body {
   color: var(--background);
 }
 
-/* Reserves the strip the fixed tab bar sits over, so the last row of a
-   list can still be scrolled into view instead of hiding under it. */
+/* Reserves the strip the fixed bars sit over, so the last row of a list
+   can still be scrolled into view instead of hiding under them. The chat
+   dock is not on every screen, hence the 0px fallback. */
 .pb-tab-bar {
-  padding-bottom: calc(var(--tab-bar-h) + 1rem);
+  padding-bottom: calc(var(--tab-bar-h) + var(--chat-bar-h, 0px) + 1rem);
+}
+
+/*
+ * The way in is anchored rather than floating.
+ *
+ * The chat bar used to sit wherever the content happened to end: half way
+ * up an empty screen, and below the fold on a full one - on the Health
+ * screen the microphone had scrolled out of reach entirely. It is the
+ * app's primary input, so it belongs in the same place every time, within
+ * a thumb's reach of the tab bar.
+ */
+.chat-dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: var(--tab-bar-h);
+  z-index: 30;
+  background: var(--background);
+  padding-block: 0.5rem;
+}
+
+/* Content dissolves into the dock rather than being sliced off by it. */
+.chat-dock::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 1.25rem;
+  pointer-events: none;
+  background: linear-gradient(to top, var(--background), transparent);
 }
 
 /*
