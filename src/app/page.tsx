@@ -79,8 +79,16 @@ export default function JarvisLanding() {
             aria-hidden
             style={{
               color: "var(--foreground)",
-              filter:
-                "drop-shadow(0 0 8px color-mix(in oklch, var(--color-jarvis) 75%, transparent))",
+              // Three stacked shadows rather than one: a single soft
+              // drop-shadow spreads too thin to read against the dark
+              // ground. A tight bright core, a mid bloom and a wide falloff
+              // give it density without turning into a blur.
+              filter: [
+                "drop-shadow(0 0 2px color-mix(in oklch, var(--color-jarvis) 100%, transparent))",
+                "drop-shadow(0 0 6px color-mix(in oklch, var(--color-jarvis) 95%, transparent))",
+                "drop-shadow(0 0 14px color-mix(in oklch, var(--color-jarvis) 80%, transparent))",
+                "drop-shadow(0 0 26px color-mix(in oklch, var(--color-jarvis) 55%, transparent))",
+              ].join(" "),
             }}
           />
         </AppLink>
