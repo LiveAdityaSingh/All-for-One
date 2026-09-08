@@ -40,6 +40,14 @@
     <uses-permission android:name="android.permission.INTERNET" />
 
     <!--
+        Voice capture, for the native speech engine. The WebView's own Web
+        Speech API cannot use it: it exposes the constructor while having no
+        engine behind it, and returns "not-allowed" even once this is
+        granted - verified on device.
+    -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!--
       Android 13+ makes this a runtime permission. It is requested right
       after the user's first capture, never at launch (build spec §6).
     -->

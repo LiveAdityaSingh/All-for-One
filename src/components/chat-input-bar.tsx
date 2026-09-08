@@ -4,6 +4,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { captureUtterance } from "@/lib/capture";
 import { getSpeechLocale } from "@/lib/locale";
+import { speechErrorMessage } from "@/lib/speech-errors";
+import { startListening, type SpeechSession } from "@/lib/speech";
+import { Capacitor } from "@capacitor/core";
 import { useAgentName } from "@/lib/use-agent-names";
 import type { Answer } from "@/lib/cross-agent";
 import { ensureNotificationPermission } from "@/lib/notifications";
@@ -38,31 +41,6 @@ const ROTATING_EXAMPLES = [
 const ROTATE_MS = 4000;
 
 // Minimal Web Speech API surface - not in lib.dom.d.ts by default.
-interface SpeechRecognitionResultLike {
-  results: { 0: { transcript: string } }[];
-}
-interface SpeechRecognitionLike extends EventTarget {
-  lang: string;
-  interimResults: boolean;
-  start: () => void;
-  // Ends the session and lets onend fire, unlike abort() which discards
-  // anything already heard.
-  stop: () => void;
-  onresult: ((event: SpeechRecognitionResultLike) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-}
-
-function getSpeechRecognition(): SpeechRecognitionLike | null {
-  if (typeof window === "undefined") return null;
-  const w = window as unknown as {
-    SpeechRecognition?: new () => SpeechRecognitionLike;
-    webkitSpeechRecognition?: new () => SpeechRecognitionLike;
-  };
-  const Ctor = w.SpeechRecognition ?? w.webkitSpeechRecognition;
-  return Ctor ? new Ctor() : null;
-}
-
 export function ChatInputBar({ variant, placeholder }: ChatInputBarProps) {
   const homeName = useAgentName("jarvis");
   const dockRef = useRef<HTMLDivElement>(null);
@@ -93,7 +71,7 @@ export function ChatInputBar({ variant, placeholder }: ChatInputBarProps) {
   const listening = useOrbStore((s) => s.state === "listening");
   const offerUndo = useUndoStore((s) => s.offer);
   const clearUndo = useUndoStore((s) => s.clear);
-  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const sessionRef = useRef<SpeechSession | null>(null);
 
   const AGENT_ROUTES: Record<AgentId, string> = {
     jarvis: "/",
@@ -180,40 +158,48 @@ export function ChatInputBar({ variant, placeholder }: ChatInputBarProps) {
     };
   }, []);
 
-  function handleMic() {
+  async function handleMic() {
     // A button that is visibly recording invites a second tap to stop it,
     // and without this that tap would start a second recogniser on top of
     // the first.
     if (useOrbStore.getState().state === "listening") {
-      recognitionRef.current?.stop();
+      sessionRef.current?.stop();
+      sessionRef.current = null;
       setOrbState("idle");
       return;
     }
 
-    const recognition = getSpeechRecognition();
-    if (!recognition) {
-      setFeedback("Voice input isn't supported in this browser.");
-      return;
-    }
-
-    recognitionRef.current = recognition;
-    // The recogniser takes one locale per session; a UK or Indian
-    // English speaker fed a US model mis-hears "quid", "lakh",
-    // "Asda", "Swiggy" and most place names.
-    recognition.lang = getSpeechLocale();
-    recognition.interimResults = false;
+    setFeedback(null);
     setOrbState("listening");
 
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      handleUtterance(transcript);
-    };
-    recognition.onerror = () => setOrbState("idle");
-    recognition.onend = () => {
-      if (useOrbStore.getState().state === "listening") setOrbState("idle");
-    };
+    const session = await startListening(getSpeechLocale(), {
+      // Partial text goes straight into the input, so you can see what it
+      // is hearing while still speaking rather than finding out after it
+      // has already been logged.
+      onPartial: (partial) => setText(partial),
+      onFinal: (final) => {
+        sessionRef.current = null;
+        setText("");
+        void handleUtterance(final);
+      },
+      onError: (error) => {
+        sessionRef.current = null;
+        setOrbState("idle");
+        const message = speechErrorMessage(error, Capacitor.isNativePlatform());
+        if (message) setFeedback(message);
+      },
+      onEnd: () => {
+        sessionRef.current = null;
+        if (useOrbStore.getState().state === "listening") setOrbState("idle");
+      },
+    });
 
-    recognition.start();
+    if (!session) {
+      setOrbState("idle");
+      setFeedback("Voice input isn't available here. Type it instead.");
+      return;
+    }
+    sessionRef.current = session;
   }
 
   const accentColor = variant === "jarvis" ? "var(--color-jarvis)" : undefined;
