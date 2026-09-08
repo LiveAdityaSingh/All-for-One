@@ -5,6 +5,7 @@ import { useState } from "react";
 import { AgentHeader } from "@/components/agent-header";
 import { ChatInputBar } from "@/components/chat-input-bar";
 import { ExampleRows } from "@/components/example-rows";
+import { HabitStreaks } from "@/components/habit-streaks";
 import { InlineEdit } from "@/components/inline-edit";
 import { ScoreCard } from "@/components/score-card";
 import { followThrough } from "@/lib/agent-scores";
@@ -199,6 +200,8 @@ export default function LisaPage() {
       </AgentHeader>
 
       <ScoreCard agent="lisa" score={followThrough(tasks ?? [])} />
+
+      <HabitStreaks tasks={tasks ?? []} />
 
       <form onSubmit={handleAdd} className="flex flex-col gap-2 px-4">
         <input

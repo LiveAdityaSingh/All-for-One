@@ -137,6 +137,11 @@ export interface Task extends Synced {
   // than every day or nothing.
   weekdays?: number[] | null;
   timesPerDay?: number | null;
+  // Consecutive applicable days completed, and the day it last grew. Kept
+  // as a running count rather than derived, because the app stores no
+  // per-day history to derive it from.
+  streak?: number;
+  streakDay?: string | null; // YYYY-MM-DD
   // How many of today's repetitions are done. Only meaningful while
   // lastCompletedOn is today; any other date means the count is stale and
   // reads as zero, which is what makes the reset need no background job.

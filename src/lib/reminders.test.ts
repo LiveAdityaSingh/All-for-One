@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   dueReminders,
   nextReminderAt,
+  upcomingReminders,
   MAX_SCHEDULED,
   notificationIdFor,
   REMINDER_ID_FLOOR,
@@ -190,5 +191,62 @@ describe("a habit only rings on the days it applies to", () => {
   it("keeps today's slot when the time has not passed yet", () => {
     const evening = habit({ dueAt: at("2026-09-09T20:00:00") });
     expect(nextReminderAt(evening, wednesday)?.toISOString().slice(0, 10)).toBe("2026-09-09");
+  });
+});
+
+describe("a habit rings once per repetition", () => {
+  // 2026-09-09 is a Wednesday; 08:00 with a 12-hour waking window.
+  const morning = new Date("2026-09-09T07:00:00");
+
+  const twiceDaily = (over = {}) =>
+    task({
+      id: "h",
+      kind: "habit",
+      dueAt: at("2026-09-09T08:00:00"),
+      weekdays: null,
+      timesPerDay: 2,
+      completedToday: 0,
+      ...over,
+    });
+
+  it("spreads the repetitions across the day rather than firing together", () => {
+    const times = upcomingReminders(twiceDaily(), morning);
+    const today = times.filter((t) => t.toISOString().slice(0, 10) === "2026-09-09");
+    expect(today).toHaveLength(2);
+    expect(today[0].getHours()).toBe(8);
+    expect(today[1].getHours()).toBe(14); // twelve waking hours split in two
+  });
+
+  it("gives each repetition its own notification", () => {
+    const scheduled = dueReminders([twiceDaily()], morning);
+    const ids = scheduled.map((r) => notificationIdFor(r.occurrence === 0 ? r.task.id : `${r.task.id}#${r.occurrence}`));
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  // Doing one of them should silence that one, not all of them.
+  it("stops reminding for repetitions already done today", () => {
+    const half = twiceDaily({ completedToday: 1, lastCompletedOn: "2026-09-09" });
+    const today = upcomingReminders(half, morning).filter(
+      (t) => t.toISOString().slice(0, 10) === "2026-09-09",
+    );
+    expect(today).toHaveLength(1);
+    expect(today[0].getHours()).toBe(14);
+  });
+
+  it("still schedules tomorrow so it keeps working unopened", () => {
+    const times = upcomingReminders(twiceDaily(), morning);
+    expect(times.some((t) => t.toISOString().slice(0, 10) === "2026-09-10")).toBe(true);
+  });
+
+  it("skips a day the habit does not apply to", () => {
+    // Mondays only: from Wednesday the next repetitions are on the 14th.
+    const mondays = twiceDaily({ weekdays: [1] });
+    const days = new Set(upcomingReminders(mondays, morning).map((t) => t.toISOString().slice(0, 10)));
+    expect([...days]).toEqual(["2026-09-14"]);
+  });
+
+  it("leaves a one-off with exactly one reminder", () => {
+    const once = task({ id: "o", kind: "one_off", dueAt: at("2026-09-09T20:00:00") });
+    expect(upcomingReminders(once, morning)).toHaveLength(1);
   });
 });

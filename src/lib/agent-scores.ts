@@ -51,7 +51,7 @@ export function pipelineHealth(applications: JobApplication[]): AgentScore {
 // of dated tasks that were finished rather than left to go overdue.
 export function followThrough(tasks: Task[], now: Date = new Date()): AgentScore {
   if (tasks.length === 0) {
-    return { score: null, label: "Follow-through", detail: "Add a task to start" };
+    return { score: null, label: "Discipline level", detail: "Add a task to start" };
   }
 
   const done = tasks.filter((t) => isDoneForNow(t, now)).length;
@@ -60,7 +60,7 @@ export function followThrough(tasks: Task[], now: Date = new Date()): AgentScore
 
   return {
     score: clamp((done / tasks.length) * 100),
-    label: "Follow-through",
+    label: "Discipline level",
     detail:
       overdue > 0
         ? `${done} done, ${open} open, ${overdue} overdue`
