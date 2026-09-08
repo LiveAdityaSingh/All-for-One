@@ -1,6 +1,7 @@
 "use client";
 
 import { useLiveQuery } from "dexie-react-hooks";
+import { Settings } from "lucide-react";
 import { AppLink } from "@/components/app-link";
 import { BannerZone } from "@/components/banner-zone";
 import { ChatInputBar } from "@/components/chat-input-bar";
@@ -62,8 +63,26 @@ export default function JarvisLanding() {
           <p className="text-sm text-foreground-muted">{now ? formatDate(now) : " "}</p>
           <h1 className="text-xl font-semibold">{now ? greeting(now.getHours()) : " "}</h1>
         </div>
-        <AppLink href="/settings" className="text-xs text-foreground-muted underline">
-          Settings
+        {/* A gear rather than the word: this is the one control on Home
+            that is not an agent, and the icon says so without competing
+            with the greeting for attention. White, so it stays neutral
+            among five coloured agents, lit by Jarvis's green because Home
+            is his room. */}
+        <AppLink
+          href="/settings"
+          aria-label="Settings"
+          className="-mr-2 -mt-1 flex h-11 w-11 items-center justify-center rounded-full"
+        >
+          <Settings
+            size={22}
+            strokeWidth={1.9}
+            aria-hidden
+            style={{
+              color: "var(--foreground)",
+              filter:
+                "drop-shadow(0 0 8px color-mix(in oklch, var(--color-jarvis) 75%, transparent))",
+            }}
+          />
         </AppLink>
       </div>
 
