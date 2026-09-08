@@ -6,6 +6,7 @@ import { AgentHeader } from "@/components/agent-header";
 import { ChatInputBar } from "@/components/chat-input-bar";
 import { ExampleRows } from "@/components/example-rows";
 import { HabitStreaks } from "@/components/habit-streaks";
+import { isOnlyDefault } from "@/lib/seed";
 import { InlineEdit } from "@/components/inline-edit";
 import { ScoreCard } from "@/components/score-card";
 import { followThrough } from "@/lib/agent-scores";
@@ -290,10 +291,20 @@ export default function LisaPage() {
         )}
       </form>
 
-      {open.length === 0 && done.length === 0 && (
+      {open.length > 0 && (
+        <ul className="flex flex-col gap-2 px-4">
+          {open.map((task) => <TaskRow key={task.id} task={task} />)}
+        </ul>
+      )}
+
+      {isOnlyDefault((tasks ?? []).map((t) => t.id)) && (
         <ExampleRows
           agent="lisa"
-          intro="Nothing here yet. These are the four kinds of thing this screen holds:"
+          intro={
+            open.length > 0
+              ? "That one is a suggestion to get you going. These are the four kinds of thing this screen holds:"
+              : "Nothing here yet. These are the four kinds of thing this screen holds:"
+          }
           rows={[
             {
               primary: "Call the plumber",
@@ -318,12 +329,6 @@ export default function LisaPage() {
             },
           ]}
         />
-      )}
-
-      {open.length > 0 && (
-        <ul className="flex flex-col gap-2 px-4">
-          {open.map((task) => <TaskRow key={task.id} task={task} />)}
-        </ul>
       )}
 
       <AlarmNote />
