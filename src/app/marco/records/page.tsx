@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { computeBodyPotential } from "@/lib/body-potential";
 import { getBodyMetrics } from "@/lib/metrics";
 import { softDelete } from "@/lib/backup";
+import { InlineEdit } from "@/components/inline-edit";
 import { formatHours } from "@/components/capture-list";
 import { useAgentName } from "@/lib/use-agent-names";
 import type { Capture, CaptureKind } from "@/lib/types";
@@ -153,7 +154,18 @@ export default function HealthRecordsPage() {
                   aria-hidden
                 />
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm">{describe(item)}</p>
+                  {/* Sleep reads as a duration rather than a label, so only
+                      the ones whose text is the record are editable here. */}
+                  {item.kind === "sleep" ? (
+                    <p className="truncate text-sm">{describe(item)}</p>
+                  ) : (
+                    <InlineEdit
+                      value={item.label}
+                      label="what this was"
+                      onSave={(label) => db.captures.update(item.id, { label })}
+                      className="text-sm"
+                    />
+                  )}
                   <p className="text-xs text-foreground-muted">
                     {new Date(item.capturedAt).toLocaleTimeString(undefined, {
                       hour: "2-digit",

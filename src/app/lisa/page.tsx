@@ -5,6 +5,7 @@ import { useState } from "react";
 import { AgentHeader } from "@/components/agent-header";
 import { ChatInputBar } from "@/components/chat-input-bar";
 import { ExampleRows } from "@/components/example-rows";
+import { InlineEdit } from "@/components/inline-edit";
 import { ScoreCard } from "@/components/score-card";
 import { followThrough } from "@/lib/agent-scores";
 import { db } from "@/lib/db";
@@ -48,9 +49,12 @@ function TaskRow({ task }: { task: Task }) {
       </button>
 
       <div className="min-w-0 flex-1">
-        <p className={`text-sm ${done ? "text-foreground-muted line-through" : ""}`}>
-          {task.title}
-        </p>
+        <InlineEdit
+          value={task.title}
+          label="task name"
+          onSave={(title) => db.tasks.update(task.id, { title })}
+          className={`text-sm ${done ? "text-foreground-muted line-through" : ""}`}
+        />
         <p className="text-xs text-foreground-muted">
           {TASK_KIND_LABELS[task.kind]}
           {task.dueAt && ` - ${new Date(task.dueAt).toLocaleString()}`}
