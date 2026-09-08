@@ -6,7 +6,15 @@ import type { BodyPotential } from "@/lib/body-potential";
 // Only the headline number is shown here. The breakdown it was computed
 // from lives on the records page rather than being deleted, so the score
 // stays interrogable without cluttering the screen it heads.
-export function BodyPotentialCard({ potential }: { potential: BodyPotential }) {
+export function BodyPotentialCard({
+  potential,
+  trend,
+}: {
+  potential: BodyPotential;
+  // Week-on-week movement, which the score itself cannot express: the
+  // gauge says where you are, this says which way you are going.
+  trend?: string;
+}) {
   const { score, headline, bmi } = potential;
 
   return (
@@ -30,6 +38,8 @@ export function BodyPotentialCard({ potential }: { potential: BodyPotential }) {
       </div>
 
       <ScoreGauge score={score} caption={headline} />
+
+      {trend && <p className="text-xs text-foreground-muted">{trend}</p>}
 
       <p className="text-[11px] text-foreground-muted">
         How consistently you logged movement, sleep and meals against ordinary
