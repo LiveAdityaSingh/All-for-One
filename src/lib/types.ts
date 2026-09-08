@@ -24,7 +24,10 @@ export type AgentId = "jarvis" | "tony" | "lisa" | "vanessa" | "marco";
 // Vanessa §8, Marco §9) land here. Voice capture has to work offline and
 // queue locally (build spec §12), so the parse result is always written
 // to the device first; nothing waits on a network round-trip.
-export type CaptureKind = "expense" | "workout" | "event";
+// Sleep and meals join workouts as things Marco reasons about: a body
+// score built on training alone would be a training score wearing a
+// health label.
+export type CaptureKind = "expense" | "workout" | "event" | "sleep" | "meal";
 
 export interface Capture extends Synced {
   id: string;
@@ -95,6 +98,27 @@ export interface BalanceSnapshot extends Synced {
   balance: number;
   recordedAt: string;
 }
+
+// The body you are scoring against. Height and sex barely change, weight
+// does, so this is a single living record rather than a log - the point is
+// "what am I now", not a history of measurements.
+//
+// Deliberately small: every field here is one the score actually uses, so
+// nothing is asked for that does not earn its place on the form. Lives on
+// the device with everything else and travels only in a backup the user
+// exports themselves.
+export type Sex = "female" | "male" | "unspecified";
+
+export interface BodyMetrics extends Synced {
+  id: string; // always PROFILE_ID - there is one body
+  heightCm: number | null;
+  weightKg: number | null;
+  birthYear: number | null;
+  sex: Sex;
+  updatedAt: string;
+}
+
+export const PROFILE_ID = "me";
 
 // --- Lisa: scheduling (build spec §7) -------------------------------------
 

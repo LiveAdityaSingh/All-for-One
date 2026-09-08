@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import { scheduleDailyDigest } from "@/lib/notifications";
+import { installReminderSync, syncReminders } from "@/lib/reminders";
+import { snapshotIfDue } from "@/lib/snapshot";
 import { useAgentNamesStore } from "@/store/agent-names-store";
 import { useCurrencyStore } from "@/store/currency-store";
 
@@ -39,6 +41,18 @@ export function AppBootstrap() {
     // to the next with no user action at all.
     if (Capacitor.isNativePlatform()) {
       void scheduleDailyDigest();
+
+      // Reminders are reconciled against the database on every launch, so
+      // a reboot, a restore, or permission finally being granted all
+      // repair themselves without the user doing anything. The hooks then
+      // keep the OS in step with every later write.
+      installReminderSync();
+      void syncReminders();
+
+      // storage.persist() is refused on this device, so the WebView's
+      // IndexedDB is evictable. App-private files are not, so a daily
+      // snapshot lands somewhere the system will not clear.
+      void snapshotIfDue();
     }
   }, [syncCurrency, syncAgentNames]);
 

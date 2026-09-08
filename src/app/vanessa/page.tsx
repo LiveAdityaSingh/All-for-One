@@ -3,11 +3,11 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { useMoney } from "@/lib/use-money";
 import { useState } from "react";
+import { AgentHeader } from "@/components/agent-header";
 import { ChatInputBar } from "@/components/chat-input-bar";
 import { CategoryChart } from "@/components/finance/category-chart";
 import { PulseCard } from "@/components/finance/pulse-card";
 import { db } from "@/lib/db";
-import { useAgentName } from "@/lib/use-agent-names";
 import { addAccount, computeRunway, daysSince, isStale, updateBalance } from "@/lib/finance";
 import {
   deleteTransaction,
@@ -85,7 +85,6 @@ function AccountCard({ account }: { account: Account }) {
 }
 
 export default function VanessaPage() {
-  const agentName = useAgentName("vanessa");
   const { formatMoney: money } = useMoney();
   const accounts = useLiveQuery(() => db.accounts.toArray(), []);
   const snapshots = useLiveQuery(() => db.balanceSnapshots.toArray(), []);
@@ -144,14 +143,14 @@ export default function VanessaPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <header className="flex items-center justify-between gap-2 px-4">
-        <div>
-          <h1 className="agent-text-glow text-2xl font-semibold"
-            style={{ color: "var(--color-vanessa)", ["--glow" as string]: "var(--color-vanessa)" }}>
-            {agentName}
-          </h1>
-          <p className="text-xs text-foreground-muted">Money manager</p>
-        </div>
+      <AgentHeader
+        agent="vanessa"
+        subtitle="Money manager"
+        items={[
+          { label: "All transactions", href: "/vanessa/records", hint: "Every period, not just this one" },
+          { label: "Export as CSV", onSelect: handleExport, hint: "Download what is on screen" },
+        ]}
+      >
         <button
           onClick={() => setShowAdd((v) => !v)}
           className="flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm"
@@ -159,7 +158,7 @@ export default function VanessaPage() {
         >
           <span aria-hidden>⊕</span> Account
         </button>
-      </header>
+      </AgentHeader>
 
       {/* Income / Expenses / Net for the selected period. Red and green do
           numeric work here; Vanessa's identity hue stays violet, which is

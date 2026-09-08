@@ -11,6 +11,14 @@ interface CaptureListProps {
   emptyLabel: string;
 }
 
+// "7h 30m" rather than "450 min": sleep is talked about in hours.
+export function formatHours(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const rest = Math.round(minutes % 60);
+  if (hours === 0) return `${rest}m`;
+  return rest === 0 ? `${hours}h` : `${hours}h ${rest}m`;
+}
+
 function describe(capture: Capture, formatMoney: (v: number) => string): string {
   switch (capture.kind) {
     case "expense":
@@ -24,6 +32,12 @@ function describe(capture: Capture, formatMoney: (v: number) => string): string 
       return capture.scheduledFor
         ? `${capture.label} - ${new Date(capture.scheduledFor).toLocaleString()}`
         : capture.label;
+    case "sleep":
+      return capture.durationMinutes
+        ? `Slept ${formatHours(capture.durationMinutes)}`
+        : capture.label;
+    case "meal":
+      return capture.label;
   }
 }
 

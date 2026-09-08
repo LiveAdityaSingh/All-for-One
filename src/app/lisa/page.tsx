@@ -2,11 +2,16 @@
 
 import { useLiveQuery } from "dexie-react-hooks";
 import { useState } from "react";
+import { AgentHeader } from "@/components/agent-header";
 import { ChatInputBar } from "@/components/chat-input-bar";
+import { ExampleRows } from "@/components/example-rows";
+import { ScoreCard } from "@/components/score-card";
+import { followThrough } from "@/lib/agent-scores";
 import { db } from "@/lib/db";
-import { useAgentName } from "@/lib/use-agent-names";
 import { useHasMounted } from "@/lib/use-has-mounted";
 import { canHandOff, handoffFor, openHandoff } from "@/lib/handoff";
+import { MAX_SCHEDULED } from "@/lib/reminders";
+import { Capacitor } from "@capacitor/core";
 import { softDelete } from "@/lib/backup";
 import { addTask, isDoneForNow, isOverdue, toggleTask } from "@/lib/tasks";
 import { TASK_KIND_LABELS, type Task, type TaskKind } from "@/lib/types";
@@ -92,6 +97,18 @@ function AlarmNote() {
   const hasMounted = useHasMounted();
   if (!hasMounted) return null;
 
+  // The installed app can schedule a real alert; a web page cannot, which
+  // is the whole reason the clock-app handoff exists.
+  if (Capacitor.isNativePlatform()) {
+    return (
+      <p className="px-4 text-xs text-foreground-muted">
+        Dated reminders alert you at the time you set, even with the app closed.
+        The nearest {MAX_SCHEDULED} are kept scheduled; anything further out is
+        picked up later.
+      </p>
+    );
+  }
+
   return (
     <p className="px-4 text-xs text-foreground-muted">
       {canHandOff()
@@ -102,7 +119,6 @@ function AlarmNote() {
 }
 
 export default function LisaPage() {
-  const name = useAgentName("lisa");
   const tasks = useLiveQuery(() => db.tasks.orderBy("createdAt").reverse().toArray(), []);
   const [title, setTitle] = useState("");
   const [kind, setKind] = useState<TaskKind>("one_off");
@@ -121,18 +137,20 @@ export default function LisaPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-baseline justify-between px-4">
-        <h1 className="agent-text-glow text-lg font-semibold"
-          style={{ color: "var(--color-lisa)", ["--glow" as string]: "var(--color-lisa)" }}>
-          {name}
-        </h1>
+      <AgentHeader
+        agent="lisa"
+        subtitle="Reminders, habits and milestones"
+        items={[
+          { label: "Everything tracked", href: "/lisa/records", hint: "Including everything done" },
+        ]}
+      >
         {/* Open loops shown as a persistent count (build spec §11). */}
         {open.length > 0 && (
-          <span className="text-xs text-foreground-muted">
-            {open.length} open
-          </span>
+          <span className="text-xs text-foreground-muted">{open.length} open</span>
         )}
-      </div>
+      </AgentHeader>
+
+      <ScoreCard agent="lisa" score={followThrough(tasks ?? [])} />
 
       <form onSubmit={handleAdd} className="flex flex-col gap-2 px-4">
         <input
@@ -170,9 +188,33 @@ export default function LisaPage() {
       </form>
 
       {open.length === 0 && done.length === 0 && (
-        <p className="px-4 text-sm text-foreground-muted">
-          Nothing scheduled. Try &ldquo;remind me to call the plumber at 5pm&rdquo;.
-        </p>
+        <ExampleRows
+          agent="lisa"
+          intro="Nothing here yet. These are the four kinds of thing this screen holds:"
+          rows={[
+            {
+              primary: "Call the plumber",
+              secondary: "One-off · today at 5pm",
+              how: "remind me to call the plumber at 5pm",
+              spoken: true,
+            },
+            {
+              primary: "Stretch for ten minutes",
+              secondary: "Daily · resets every morning",
+              how: "Pick Daily in the form above; ticking it counts for today only.",
+            },
+            {
+              primary: "Pay the rent",
+              secondary: "Monthly · counts once a month",
+              how: "Pick Monthly in the form above.",
+            },
+            {
+              primary: "Finish the portfolio site",
+              secondary: "Milestone · no reset, just done or not",
+              how: "Pick Milestone for something with an end rather than a rhythm.",
+            },
+          ]}
+        />
       )}
 
       {open.length > 0 && (

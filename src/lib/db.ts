@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable } from "dexie";
 import type {
   Account,
+  BodyMetrics,
   BalanceSnapshot,
   Capture,
   JobApplication,
@@ -30,6 +31,7 @@ export const SYNCED_TABLES = [
   "accounts",
   "balanceSnapshots",
   "transactions",
+  "bodyMetrics",
 ] as const;
 
 export type SyncedTable = (typeof SYNCED_TABLES)[number];
@@ -43,6 +45,7 @@ class AppDatabase extends Dexie {
   accounts!: EntityTable<Account, "id">;
   balanceSnapshots!: EntityTable<BalanceSnapshot, "id">;
   transactions!: EntityTable<Transaction, "id">;
+  bodyMetrics!: EntityTable<BodyMetrics, "id">;
   settings!: EntityTable<Setting, "key">;
   deletions!: EntityTable<Deletion, "id">;
 
@@ -115,6 +118,12 @@ class AppDatabase extends Dexie {
       applications: "id, company, stage, lifecycleStatus, stageEnteredAt, modifiedAt",
       transactions: "id, type, category, accountId, occurredAt, modifiedAt",
       tasks: "id, kind, dueAt, completedAt, createdAt, modifiedAt",
+    });
+
+    this.version(7).stores({
+      // One row, keyed by a constant: there is one body being described,
+      // not a series of measurements.
+      bodyMetrics: "id, updatedAt",
     });
 
     // Stamp every write, on every table, without touching call sites -

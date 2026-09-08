@@ -124,6 +124,27 @@ async function persist(intent: CaptureIntent, raw: string): Promise<UndoStep[]> 
     return [{ kind: "delete", table: "captures", id: base.id }];
   }
 
+  if (intent.type === "log_sleep") {
+    await db.captures.add({
+      ...base,
+      kind: "sleep",
+      agent: "marco",
+      label: "Sleep",
+      durationMinutes: intent.durationMinutes,
+    });
+    return [{ kind: "delete", table: "captures", id: base.id }];
+  }
+
+  if (intent.type === "log_meal") {
+    await db.captures.add({
+      ...base,
+      kind: "meal",
+      agent: "marco",
+      label: intent.description,
+    });
+    return [{ kind: "delete", table: "captures", id: base.id }];
+  }
+
   if (intent.type === "set_balance") {
     // Handled before this point; the account has to be resolved against
     // what the user actually has, which persist() has no view of.

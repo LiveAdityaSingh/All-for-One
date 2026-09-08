@@ -65,6 +65,7 @@ function getSpeechRecognition(): SpeechRecognitionLike | null {
 
 export function ChatInputBar({ variant, placeholder }: ChatInputBarProps) {
   const homeName = useAgentName("jarvis");
+  const dockRef = useRef<HTMLDivElement>(null);
   const [text, setText] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [answer, setAnswer] = useState<Answer | null>(null);
@@ -160,6 +161,25 @@ export function ChatInputBar({ variant, placeholder }: ChatInputBarProps) {
     setText("");
   }
 
+  useEffect(() => {
+    const dock = dockRef.current;
+    if (!dock) return;
+
+    const root = document.documentElement;
+    const publish = () => root.style.setProperty("--chat-bar-h", `${dock.offsetHeight}px`);
+    publish();
+
+    // The dock grows when an answer or an undo offer appears, so the
+    // reserved strip has to follow it rather than being measured once.
+    const observer = new ResizeObserver(publish);
+    observer.observe(dock);
+
+    return () => {
+      observer.disconnect();
+      root.style.setProperty("--chat-bar-h", "0px");
+    };
+  }, []);
+
   function handleMic() {
     // A button that is visibly recording invites a second tap to stop it,
     // and without this that tap would start a second recogniser on top of
@@ -199,7 +219,7 @@ export function ChatInputBar({ variant, placeholder }: ChatInputBarProps) {
   const accentColor = variant === "jarvis" ? "var(--color-jarvis)" : undefined;
 
   return (
-    <div className="flex flex-col gap-2 px-4">
+    <div ref={dockRef} className="chat-dock flex flex-col gap-2 px-4">
       {feedback && <p className="text-xs text-foreground-muted">{feedback}</p>}
 
       <UndoBar />
