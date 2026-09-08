@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   dueReminders,
+  nextReminderAt,
   MAX_SCHEDULED,
   notificationIdFor,
   REMINDER_ID_FLOOR,
@@ -56,7 +57,7 @@ describe("what gets scheduled", () => {
       task({ id: "past", dueAt: at("2026-09-04T09:00:00") }),
       task({ id: "done", dueAt: at("2026-09-04T18:00:00"), completedAt: at("2026-09-04T10:00:00") }),
     ];
-    expect(dueReminders(tasks, NOW).map((t) => t.id)).toEqual(["future"]);
+    expect(dueReminders(tasks, NOW).map((r) => r.task.id)).toEqual(["future"]);
   });
 
   it("puts the soonest first", () => {
@@ -65,7 +66,7 @@ describe("what gets scheduled", () => {
       task({ id: "soon", dueAt: at("2026-09-04T13:00:00") }),
       task({ id: "middle", dueAt: at("2026-09-05T09:00:00") }),
     ];
-    expect(dueReminders(tasks, NOW).map((t) => t.id)).toEqual(["soon", "middle", "later"]);
+    expect(dueReminders(tasks, NOW).map((r) => r.task.id)).toEqual(["soon", "middle", "later"]);
   });
 
   // Android holds every pending alarm in system_server; an unbounded list
@@ -76,7 +77,7 @@ describe("what gets scheduled", () => {
     );
     const got = dueReminders(tasks, NOW);
     expect(got).toHaveLength(MAX_SCHEDULED);
-    const times = got.map((t) => new Date(t.dueAt as string).getTime());
+    const times = got.map((r) => r.at.getTime());
     expect(Math.max(...times)).toBeLessThanOrEqual(
       Math.min(...tasks.map((t) => new Date(t.dueAt as string).getTime())) + 20 * 864e5,
     );
@@ -86,23 +87,68 @@ describe("what gets scheduled", () => {
     expect(dueReminders([task({ id: "bad", dueAt: "not a date" })], NOW)).toEqual([]);
   });
 
-  // A daily task is not "done", it is done today - so tomorrow's instance
-  // still deserves its reminder.
-  it("respects repeating-task completion rules", () => {
+  // This previously asserted the bug: a daily task ticked today was
+  // dropped from the schedule entirely, and because every later sync saw a
+  // dueAt in the past it never came back. Ticking today should move the
+  // reminder to tomorrow, not cancel the habit.
+  it("rolls a ticked daily task on to tomorrow", () => {
     const doneToday = task({
       id: "daily",
       kind: "daily",
       dueAt: at("2026-09-04T20:00:00"),
       lastCompletedOn: "2026-09-04",
     });
-    expect(dueReminders([doneToday], NOW)).toEqual([]);
+    const [scheduled] = dueReminders([doneToday], NOW);
+    expect(scheduled.task.id).toBe("daily");
+    expect(scheduled.at.toISOString().slice(0, 10)).toBe("2026-09-05");
+    expect(scheduled.at.getHours()).toBe(20);
+  });
 
-    const doneYesterday = task({
-      id: "daily2",
-      kind: "daily",
-      dueAt: at("2026-09-04T20:00:00"),
-      lastCompletedOn: "2026-09-03",
+  it("keeps today's slot when the habit is still outstanding", () => {
+    const notYet = task({ id: "daily2", kind: "daily", dueAt: at("2026-09-04T20:00:00") });
+    const [scheduled] = dueReminders([notYet], NOW);
+    expect(scheduled.at.toISOString().slice(0, 10)).toBe("2026-09-04");
+  });
+});
+
+describe("when a repeating task next comes round", () => {
+  it("moves a daily past its time to tomorrow", () => {
+    const morning = task({ id: "d", kind: "daily", dueAt: at("2026-09-04T08:00:00") });
+    const next = nextReminderAt(morning, NOW);
+    expect(next?.toISOString().slice(0, 10)).toBe("2026-09-05");
+    expect(next?.getHours()).toBe(8);
+  });
+
+  it("keeps a monthly on its day of the month", () => {
+    const rent = task({ id: "m", kind: "monthly", dueAt: at("2026-09-20T09:00:00") });
+    const next = nextReminderAt(rent, NOW);
+    expect(next?.getDate()).toBe(20);
+    expect(next?.getMonth()).toBe(8); // September
+  });
+
+  it("rolls a monthly whose day has passed into next month", () => {
+    const rent = task({ id: "m", kind: "monthly", dueAt: at("2026-09-01T09:00:00") });
+    expect(nextReminderAt(rent, NOW)?.getMonth()).toBe(9); // October
+  });
+
+  // A reminder set for the 31st must not skip a short month by rolling
+  // into the next one.
+  it("clamps a 31st onto a shorter month", () => {
+    const monthEnd = task({ id: "m", kind: "monthly", dueAt: at("2026-08-31T09:00:00") });
+    const next = nextReminderAt(monthEnd, new Date("2026-11-15T12:00:00"));
+    expect(next?.getMonth()).toBe(10); // November
+    expect(next?.getDate()).toBe(30); // which has only 30 days
+  });
+
+  it("never reschedules something with an end rather than a rhythm", () => {
+    const finished = task({
+      id: "o",
+      kind: "one_off",
+      dueAt: at("2026-09-04T08:00:00"),
+      completedAt: at("2026-09-04T09:00:00"),
     });
-    expect(dueReminders([doneYesterday], NOW).map((t) => t.id)).toEqual(["daily2"]);
+    expect(nextReminderAt(finished, NOW)).toBeNull();
+    const missed = task({ id: "o2", kind: "one_off", dueAt: at("2026-09-04T08:00:00") });
+    expect(nextReminderAt(missed, NOW)).toBeNull();
   });
 });

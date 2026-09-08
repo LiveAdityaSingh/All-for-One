@@ -3,6 +3,7 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { AgentHeader } from "@/components/agent-header";
 import { ExampleRows } from "@/components/example-rows";
+import { InlineEdit } from "@/components/inline-edit";
 import { AppLink } from "@/components/app-link";
 import { ChatInputBar } from "@/components/chat-input-bar";
 import { ScoreCard } from "@/components/score-card";
@@ -40,9 +41,19 @@ function ApplicationRow({ app }: { app: JobApplication }) {
   return (
     <li className="lip flex flex-col gap-2 rounded-xl border border-border bg-background-elevated p-3">
       <div className="flex items-center justify-between">
-        <div>
-          <p className="font-medium">{app.company}</p>
-          <p className="text-xs text-foreground-muted">{app.role}</p>
+        <div className="min-w-0">
+          <InlineEdit
+            value={app.company}
+            label="company"
+            onSave={(company) => db.applications.update(app.id, { company })}
+            className="font-medium"
+          />
+          <InlineEdit
+            value={app.role}
+            label="role"
+            onSave={(role) => db.applications.update(app.id, { role })}
+            className="text-xs text-foreground-muted"
+          />
         </div>
         <span
           className="rounded-full px-2 py-1 text-xs font-medium"

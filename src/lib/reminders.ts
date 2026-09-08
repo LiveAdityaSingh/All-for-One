@@ -38,21 +38,80 @@ export function notificationIdFor(taskId: string): number {
   return REMINDER_ID_FLOOR + (hash % (0x7fffffff - REMINDER_ID_FLOOR));
 }
 
+export interface ScheduledReminder {
+  task: Task;
+  at: Date;
+}
+
+// Clamps a day-of-month onto a month that may be shorter: a reminder set
+// for the 31st lands on the 30th in April rather than silently jumping
+// into May.
+function onDayOfMonth(base: Date, day: number): Date {
+  const lastDay = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+  const at = new Date(base);
+  at.setDate(Math.min(day, lastDay));
+  return at;
+}
+
+// When a task should next interrupt you.
+//
+// A repeating task carries one dueAt, which is the first occurrence and
+// not the only one. Scheduling that instant directly meant a daily task
+// fired once and then never again, because every later sync saw a time in
+// the past and skipped it - so the habit half of this screen quietly did
+// nothing after day one.
+export function nextReminderAt(task: Task, now: Date = new Date()): Date | null {
+  if (!task.dueAt) return null;
+
+  const due = new Date(task.dueAt);
+  if (Number.isNaN(due.getTime())) return null;
+
+  // Something with an end rather than a rhythm: it fires once, if at all.
+  if (task.kind === "one_off" || task.kind === "milestone") {
+    if (task.completedAt) return null;
+    return due.getTime() > now.getTime() ? due : null;
+  }
+
+  // Ticked for this period already, so the next one is owed instead.
+  const settled = isDoneForNow(task, now);
+
+  if (task.kind === "daily") {
+    const at = new Date(now);
+    at.setHours(due.getHours(), due.getMinutes(), 0, 0);
+    if (settled || at.getTime() <= now.getTime()) at.setDate(at.getDate() + 1);
+    return at;
+  }
+
+  const thisMonth = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    1,
+    due.getHours(),
+    due.getMinutes(),
+    0,
+    0,
+  );
+  let at = onDayOfMonth(thisMonth, due.getDate());
+  if (settled || at.getTime() <= now.getTime()) {
+    const next = new Date(thisMonth);
+    next.setMonth(next.getMonth() + 1, 1);
+    at = onDayOfMonth(next, due.getDate());
+  }
+  return at;
+}
+
 // What *should* be scheduled right now. Pure, so the rules can be tested
-// without a device: nothing in the past, nothing already done, soonest
+// without a device: nothing in the past, nothing already settled, soonest
 // first, and never more than the cap.
 export function dueReminders(
   tasks: Task[],
   now: Date = new Date(),
   limit: number = MAX_SCHEDULED,
-): Task[] {
+): ScheduledReminder[] {
   return tasks
-    .filter((task) => {
-      if (!task.dueAt || isDoneForNow(task, now)) return false;
-      const at = new Date(task.dueAt).getTime();
-      return Number.isFinite(at) && at > now.getTime();
-    })
-    .sort((a, b) => new Date(a.dueAt as string).getTime() - new Date(b.dueAt as string).getTime())
+    .map((task) => ({ task, at: nextReminderAt(task, now) }))
+    .filter((r): r is ScheduledReminder => r.at !== null && r.at.getTime() > now.getTime())
+    .sort((a, b) => a.at.getTime() - b.at.getTime())
     .slice(0, limit);
 }
 
@@ -78,12 +137,12 @@ export async function syncReminders(now: Date = new Date()): Promise<void> {
     const from = getAgentNames().lisa;
 
     await LocalNotifications.schedule({
-      notifications: wanted.map((task) => ({
+      notifications: wanted.map(({ task, at }) => ({
         id: notificationIdFor(task.id),
         title: from,
         body: task.title,
         schedule: {
-          at: new Date(task.dueAt as string),
+          at,
           // OEM battery killers drop inexact background work regardless of
           // what the docs promise (build spec §12), so a reminder the user
           // set a time for has to be an exact alarm.

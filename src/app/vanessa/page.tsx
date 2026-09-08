@@ -4,6 +4,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { useMoney } from "@/lib/use-money";
 import { useState } from "react";
 import { AgentHeader } from "@/components/agent-header";
+import { InlineEdit } from "@/components/inline-edit";
 import { ChatInputBar } from "@/components/chat-input-bar";
 import { CategoryChart } from "@/components/finance/category-chart";
 import { PulseCard } from "@/components/finance/pulse-card";
@@ -47,7 +48,15 @@ function AccountCard({ account }: { account: Account }) {
         className="mb-3 block h-1 w-16 rounded-full"
         style={{ backgroundColor: stale ? "var(--color-stale)" : "var(--color-vanessa)" }}
       />
-      <p className="truncate text-sm font-medium">{account.name}</p>
+      {/* Renaming deliberately does not touch updatedAt: that drives the
+          staleness of the balance, and correcting a typo is not a
+          statement about how fresh the number is. */}
+      <InlineEdit
+        value={account.name}
+        label="account name"
+        onSave={(name) => db.accounts.update(account.id, { name })}
+        className="w-full text-sm font-medium"
+      />
 
       {editing ? (
         <form onSubmit={save} className="mt-1 flex gap-1">
