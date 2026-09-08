@@ -2,9 +2,11 @@
 
 import { useLiveQuery } from "dexie-react-hooks";
 import { useState } from "react";
+import { AgentHeader } from "@/components/agent-header";
 import { ChatInputBar } from "@/components/chat-input-bar";
+import { ScoreCard } from "@/components/score-card";
+import { followThrough } from "@/lib/agent-scores";
 import { db } from "@/lib/db";
-import { useAgentName } from "@/lib/use-agent-names";
 import { useHasMounted } from "@/lib/use-has-mounted";
 import { canHandOff, handoffFor, openHandoff } from "@/lib/handoff";
 import { MAX_SCHEDULED } from "@/lib/reminders";
@@ -116,7 +118,6 @@ function AlarmNote() {
 }
 
 export default function LisaPage() {
-  const name = useAgentName("lisa");
   const tasks = useLiveQuery(() => db.tasks.orderBy("createdAt").reverse().toArray(), []);
   const [title, setTitle] = useState("");
   const [kind, setKind] = useState<TaskKind>("one_off");
@@ -135,18 +136,20 @@ export default function LisaPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-baseline justify-between px-4">
-        <h1 className="agent-text-glow text-lg font-semibold"
-          style={{ color: "var(--color-lisa)", ["--glow" as string]: "var(--color-lisa)" }}>
-          {name}
-        </h1>
+      <AgentHeader
+        agent="lisa"
+        subtitle="Reminders, habits and milestones"
+        items={[
+          { label: "Everything tracked", href: "/lisa/records", hint: "Including everything done" },
+        ]}
+      >
         {/* Open loops shown as a persistent count (build spec §11). */}
         {open.length > 0 && (
-          <span className="text-xs text-foreground-muted">
-            {open.length} open
-          </span>
+          <span className="text-xs text-foreground-muted">{open.length} open</span>
         )}
-      </div>
+      </AgentHeader>
+
+      <ScoreCard agent="lisa" score={followThrough(tasks ?? [])} />
 
       <form onSubmit={handleAdd} className="flex flex-col gap-2 px-4">
         <input

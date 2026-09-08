@@ -22,12 +22,20 @@ export function BodyPotentialCard({ potential }: { potential: BodyPotential }) {
           <p className="text-[10px] uppercase tracking-wider text-foreground-muted">
             Body Potential · this week
           </p>
-          <p
-            className="text-4xl font-semibold leading-tight"
-            style={{ color: "var(--color-marco)" }}
-          >
-            {score === null ? "—" : `${score}%`}
-          </p>
+          {/* An em dash at 4xl reads as a horizontal rule, not as "no
+              score", so the empty state says it in words instead. */}
+          {score === null ? (
+            <p className="text-lg font-semibold" style={{ color: "var(--color-stale)" }}>
+              Nothing logged yet
+            </p>
+          ) : (
+            <p
+              className="text-4xl font-semibold leading-tight tabular-nums"
+              style={{ color: "var(--color-marco)" }}
+            >
+              {score}%
+            </p>
+          )}
           <p className="mt-0.5 text-xs text-foreground-muted">{headline}</p>
         </div>
         {bmi !== null && (

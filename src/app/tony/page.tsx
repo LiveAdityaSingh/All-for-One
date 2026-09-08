@@ -1,10 +1,12 @@
 "use client";
 
 import { useLiveQuery } from "dexie-react-hooks";
+import { AgentHeader } from "@/components/agent-header";
 import { AppLink } from "@/components/app-link";
 import { ChatInputBar } from "@/components/chat-input-bar";
+import { ScoreCard } from "@/components/score-card";
+import { pipelineHealth } from "@/lib/agent-scores";
 import { db } from "@/lib/db";
-import { useAgentName } from "@/lib/use-agent-names";
 import { getNudgeStatus, recordNudgeIgnored, undoDecay } from "@/lib/nudge-engine";
 import { STAGE_LABELS, type ApplicationStage, type JobApplication } from "@/lib/types";
 
@@ -96,7 +98,6 @@ function ApplicationRow({ app }: { app: JobApplication }) {
 }
 
 export default function TonyPage() {
-  const name = useAgentName("tony");
   const applications = useLiveQuery(
     () => db.applications.orderBy("stageEnteredAt").reverse().toArray(),
     [],
@@ -104,18 +105,19 @@ export default function TonyPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between px-4">
-        <h1 className="agent-text-glow text-lg font-semibold"
-          style={{ color: "var(--color-tony)", ["--glow" as string]: "var(--color-tony)" }}>
-          {name}
-        </h1>
-        <div className="flex gap-3 text-xs text-foreground-muted">
-          <AppLink href="/tony/new">Add</AppLink>
-          <AppLink href="/tony/import">Import CSV</AppLink>
-          <AppLink href="/tony/claims">Claims</AppLink>
-          <AppLink href="/tony/cv-variants">CV variants</AppLink>
-        </div>
-      </div>
+      <AgentHeader
+        agent="tony"
+        subtitle="Applications and the CVs behind them"
+        items={[
+          { label: "Log an application", href: "/tony/new", hint: "Company, role, CV used" },
+          { label: "Everything tracked", href: "/tony/records", hint: "Including closed and rejected" },
+          { label: "Import from CSV", href: "/tony/import", hint: "Bring in a spreadsheet" },
+          { label: "Claims", href: "/tony/claims", hint: "Facts your CV may draw on" },
+          { label: "CV variants", href: "/tony/cv-variants", hint: "Which version went where" },
+        ]}
+      />
+
+      <ScoreCard agent="tony" score={pipelineHealth(applications ?? [])} />
 
       <ul className="flex flex-col gap-3 px-4">
         {applications?.length === 0 && (
