@@ -9,6 +9,8 @@ import {
   type Provider,
 } from "@/lib/llm";
 import { useHasMounted } from "@/lib/use-has-mounted";
+import { Capacitor } from "@capacitor/core";
+import { listSnapshots, restoreSnapshot, writeSnapshot, type SnapshotInfo } from "@/lib/snapshot";
 import {
   AGENT_IDS,
   CHARACTER_NAMES,
@@ -131,7 +133,9 @@ function YourData() {
   const [status, setStatus] = useState<string | null>(null);
   const [pending, setPending] = useState<{ file: File; note: string } | null>(null);
   const [storage, setStorage] = useState<string | null>(null);
+  const [snapshots, setSnapshots] = useState<SnapshotInfo[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
+  const native = Capacitor.isNativePlatform();
 
   useEffect(() => {
     // Reading it here rather than during render keeps the first client
@@ -145,7 +149,26 @@ function YourData() {
         `${mb} MB stored · ${persisted ? "protected from automatic cleanup" : "not protected from automatic cleanup"}`,
       );
     })();
+
+    void listSnapshots().then(setSnapshots);
   }, []);
+
+  async function handleSnapshotNow() {
+    const written = await writeSnapshot();
+    setSnapshots(await listSnapshots());
+    setStatus(written ? "Snapshot taken." : "Could not write a snapshot.");
+  }
+
+  async function handleRestoreLatest() {
+    const newest = snapshots[0];
+    if (!newest) return;
+    const ok = await restoreSnapshot(newest.name);
+    setStatus(
+      ok
+        ? `Restored everything from ${newest.takenAt.toLocaleString()}.`
+        : "That snapshot could not be read.",
+    );
+  }
 
   async function handleExport() {
     const backup = await buildBackup();
@@ -256,6 +279,40 @@ function YourData() {
 
       {status && <p className="text-xs text-foreground-muted">{status}</p>}
       {storage && <p className="text-[11px] text-foreground-muted">{storage}</p>}
+
+      {/* The line above reports that browser storage is evictable, which is
+          true and worth knowing. This is the answer to it: app-private
+          files the system does not clear. */}
+      {native && (
+        <div className="flex flex-col gap-2 border-t border-border pt-3">
+          <span className="text-sm font-medium">Automatic backups</span>
+          <p className="text-xs text-foreground-muted">
+            {snapshots.length === 0
+              ? "A snapshot is taken on the first launch of each day, into storage the system does not clear. None yet."
+              : `Kept on this device, one a day, ${snapshots.length} of the last 7. Newest ${snapshots[0].takenAt.toLocaleString()}.`}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleSnapshotNow}
+              className="rounded-full border border-border px-3 py-1 text-xs"
+            >
+              Snapshot now
+            </button>
+            <button
+              onClick={handleRestoreLatest}
+              disabled={snapshots.length === 0}
+              className="rounded-full border border-border px-3 py-1 text-xs disabled:opacity-40"
+            >
+              Restore the newest
+            </button>
+          </div>
+          <p className="text-[11px] text-foreground-muted">
+            Restoring replaces everything currently on the device. These snapshots
+            go with the app, so uninstalling still takes them &mdash; the export
+            above is what survives that.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
