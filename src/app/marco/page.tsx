@@ -37,21 +37,17 @@ export default function MarcoPage() {
         ]}
       />
 
-      <BodyPotentialCard potential={potential} />
+      <BodyPotentialCard potential={potential} trend={describeTrend(report)} />
 
       {/*
-        Descriptive, never prescriptive (build spec §9). This reports what
-        was logged and how it moved; it never says what the user should do
-        about it, and never interprets symptoms.
-      */}
-      <div className="mx-4 rounded-xl border border-border bg-background-elevated p-4">
-        <p className="text-xs text-foreground-muted">This week</p>
-        <p className="text-2xl font-semibold" style={{ color: "var(--color-marco)" }}>
-          {report.sessions} session{report.sessions === 1 ? "" : "s"}
-        </p>
-        <p className="mt-1 text-sm text-foreground-muted">{describeTrend(report)}</p>
-      </div>
+        The sessions card that used to sit here said the same thing as the
+        Movement component behind the gauge - the same number, twice, one
+        under the other. Its trend line was the only part the gauge could
+        not express, so that moved into the card and the rest went.
 
+        Descriptive, never prescriptive (build spec §9): this reports what
+        was logged and how it moved, never what to do about it.
+      */}
       <CaptureList agent="marco" emptyLabel="Nothing logged yet. Try “did 45 minutes legs”." />
 
       <ChatInputBar variant="agent" placeholder="e.g. slept 7 hours" />

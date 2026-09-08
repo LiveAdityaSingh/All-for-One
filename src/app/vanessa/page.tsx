@@ -9,7 +9,7 @@ import { ChatInputBar } from "@/components/chat-input-bar";
 import { CategoryChart } from "@/components/finance/category-chart";
 import { PulseCard } from "@/components/finance/pulse-card";
 import { db } from "@/lib/db";
-import { addAccount, computeRunway, daysSince, isStale, updateBalance } from "@/lib/finance";
+import { addAccount, computeRunway, daysSince, deleteAccount, isStale, updateBalance } from "@/lib/finance";
 import {
   deleteTransaction,
   getMonthlyLimit,
@@ -31,6 +31,9 @@ function AccountCard({ account }: { account: Account }) {
   const { formatMoney: money } = useMoney();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState("");
+  // Deleting an account throws away its balance history, so it asks first
+  // rather than offering an undo it cannot honour.
+  const [confirming, setConfirming] = useState(false);
   const stale = isStale(account);
   const days = Math.floor(daysSince(account.updatedAt));
 
@@ -82,13 +85,45 @@ function AccountCard({ account }: { account: Account }) {
       <p className="text-[11px] text-foreground-muted">
         {account.goal || "Current Balance"}
       </p>
-      <button
-        onClick={() => setEditing(true)}
-        className="mt-1 text-[11px] underline"
-        style={{ color: stale ? "var(--color-overdue)" : "var(--foreground-muted)" }}
-      >
-        {stale ? `Stale · ${days}d — update` : "Tap to edit"}
-      </button>
+      {confirming ? (
+        <div className="mt-1 flex flex-col gap-1">
+          <span className="text-[11px] text-foreground-muted">
+            Delete this account? Transactions are kept, its balance history is not.
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => deleteAccount(account.id)}
+              className="rounded-full px-2 py-0.5 text-[11px] font-medium"
+              style={{ backgroundColor: "var(--color-overdue)", color: "var(--background)" }}
+            >
+              Delete
+            </button>
+            <button
+              onClick={() => setConfirming(false)}
+              className="rounded-full border border-border px-2 py-0.5 text-[11px]"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <button
+            onClick={() => setEditing(true)}
+            className="text-[11px] underline"
+            style={{ color: stale ? "var(--color-overdue)" : "var(--foreground-muted)" }}
+          >
+            {stale ? `Stale · ${days}d — update` : "Tap to edit"}
+          </button>
+          <button
+            onClick={() => setConfirming(true)}
+            aria-label={`Delete ${account.name}`}
+            className="text-[11px] text-foreground-muted underline"
+          >
+            Delete
+          </button>
+        </div>
+      )}
     </div>
   );
 }

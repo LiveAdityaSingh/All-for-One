@@ -191,3 +191,43 @@ export async function anyAccountStale(now: Date = new Date()): Promise<boolean> 
   const accounts = await db.accounts.toArray();
   return accounts.some((a) => isStale(a, now));
 }
+
+// Removing an account, and deciding what that means for what referenced it.
+//
+// An account was the one record you could create and never remove, so a
+// mis-typed one was permanent. Deleting it has to answer two questions
+// about the records pointing at it, and the answers are different:
+//
+// Transactions are kept. "£24 at Asda" happened whether or not you still
+// track the card it came from, and deleting spending history to tidy up an
+// account would quietly rewrite what you spent. They are unlinked instead.
+//
+// Balance snapshots are deleted. They are readings of this account and
+// mean nothing without it - left behind they would go on feeding a runway
+// figure for money that is no longer being tracked.
+export async function deleteAccount(id: string): Promise<void> {
+  await db.transaction(
+    "rw",
+    db.accounts,
+    db.balanceSnapshots,
+    db.transactions,
+    db.deletions,
+    async () => {
+      const deletedAt = new Date().toISOString();
+
+      const snapshots = await db.balanceSnapshots.where("accountId").equals(id).toArray();
+      for (const snapshot of snapshots) {
+        await db.balanceSnapshots.delete(snapshot.id);
+        await db.deletions.put({ id: snapshot.id, table: "balanceSnapshots", deletedAt });
+      }
+
+      const linked = await db.transactions.where("accountId").equals(id).toArray();
+      for (const transaction of linked) {
+        await db.transactions.update(transaction.id, { accountId: null });
+      }
+
+      await db.accounts.delete(id);
+      await db.deletions.put({ id, table: "accounts", deletedAt });
+    },
+  );
+}
