@@ -11,7 +11,7 @@ import { LocalNotifications } from "@capacitor/local-notifications";
 import { db } from "./db";
 import { getAgentNames } from "./agent-names";
 import { ensureNotificationPermission } from "./notifications";
-import { appliesOn, isDoneForNow } from "./tasks";
+import { appliesOn, doneToday, isDoneForNow, timesPerDay } from "./tasks";
 import type { Task } from "./types";
 
 // Android keeps every pending alarm in memory in system_server, and a
@@ -41,7 +41,15 @@ export function notificationIdFor(taskId: string): number {
 export interface ScheduledReminder {
   task: Task;
   at: Date;
+  // Which repetition of the day this is, 0-based. A habit done three times
+  // a day rings three times, and each needs its own notification id.
+  occurrence: number;
 }
+
+// A habit's repetitions are spread across a waking day rather than fired
+// together: three times a day means morning, midday and evening, not three
+// pings at eight in the morning.
+export const ACTIVE_HOURS = 12;
 
 // Clamps a day-of-month onto a month that may be shorter: a reminder set
 // for the 31st lands on the 30th in April rather than silently jumping
@@ -107,6 +115,52 @@ export function nextReminderAt(task: Task, now: Date = new Date()): Date | null 
   return at;
 }
 
+// The clock times a habit's repetitions fall on for a given day, starting
+// at the time you set and spread evenly across the waking window.
+function habitSlots(task: Task, day: Date, due: Date): Date[] {
+  const count = timesPerDay(task);
+  const spacing = (ACTIVE_HOURS * 60 * 60 * 1000) / count;
+  const first = new Date(day);
+  first.setHours(due.getHours(), due.getMinutes(), 0, 0);
+  return Array.from({ length: count }, (_, i) => new Date(first.getTime() + i * spacing));
+}
+
+// Every time this task should still ring. One entry for anything that is
+// not a habit; for a habit, the repetitions left today plus the whole of
+// the next day it applies to, so something is always scheduled ahead even
+// if the app is not opened again today.
+export function upcomingReminders(task: Task, now: Date = new Date()): Date[] {
+  if (!task.dueAt) return [];
+  const due = new Date(task.dueAt);
+  if (Number.isNaN(due.getTime())) return [];
+
+  if (task.kind !== "habit") {
+    const at = nextReminderAt(task, now);
+    return at ? [at] : [];
+  }
+
+  const times: Date[] = [];
+
+  if (appliesOn(task, now)) {
+    // Repetitions already ticked off today do not ring again.
+    const done = doneToday(task, now);
+    habitSlots(task, now, due).forEach((slot, i) => {
+      if (i >= done && slot.getTime() > now.getTime()) times.push(slot);
+    });
+  }
+
+  const nextDay = new Date(now);
+  for (let i = 0; i < 8; i++) {
+    nextDay.setDate(nextDay.getDate() + 1);
+    if (appliesOn(task, nextDay)) {
+      times.push(...habitSlots(task, nextDay, due));
+      break;
+    }
+  }
+
+  return times;
+}
+
 // What *should* be scheduled right now. Pure, so the rules can be tested
 // without a device: nothing in the past, nothing already settled, soonest
 // first, and never more than the cap.
@@ -116,8 +170,10 @@ export function dueReminders(
   limit: number = MAX_SCHEDULED,
 ): ScheduledReminder[] {
   return tasks
-    .map((task) => ({ task, at: nextReminderAt(task, now) }))
-    .filter((r): r is ScheduledReminder => r.at !== null && r.at.getTime() > now.getTime())
+    .flatMap((task) =>
+      upcomingReminders(task, now).map((at, occurrence) => ({ task, at, occurrence })),
+    )
+    .filter((r) => r.at.getTime() > now.getTime())
     .sort((a, b) => a.at.getTime() - b.at.getTime())
     .slice(0, limit);
 }
@@ -144,8 +200,10 @@ export async function syncReminders(now: Date = new Date()): Promise<void> {
     const from = getAgentNames().lisa;
 
     await LocalNotifications.schedule({
-      notifications: wanted.map(({ task, at }) => ({
-        id: notificationIdFor(task.id),
+      notifications: wanted.map(({ task, at, occurrence }) => ({
+        // Each repetition needs its own id, or the second one would cancel
+        // the first when they are registered together.
+        id: notificationIdFor(occurrence === 0 ? task.id : `${task.id}#${occurrence}`),
         title: from,
         body: task.title,
         schedule: {

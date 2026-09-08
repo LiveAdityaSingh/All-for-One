@@ -62,7 +62,7 @@ describe("pipeline health", () => {
   });
 });
 
-describe("follow-through", () => {
+describe("discipline level", () => {
   it("is the share of tasks actually finished", () => {
     const result = followThrough(
       [task({ completedAt: daysAgo(0) }), task(), task(), task()],

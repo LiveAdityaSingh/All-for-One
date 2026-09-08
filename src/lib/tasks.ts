@@ -36,6 +36,37 @@ export function doneToday(task: Task, now: Date = new Date()): number {
   return Math.max(0, task.completedToday ?? (task.kind === "habit" ? 0 : 1));
 }
 
+// Three weeks is the point this app treats a habit as established. It is a
+// round, widely-quoted figure rather than a scientific one, and it is used
+// only to decide when to stop calling something new.
+export const STREAK_TO_GRADUATE = 21;
+
+// The last day before `from` that this habit actually applied to. A habit
+// set to Mondays does not break its streak by being skipped on a Tuesday.
+export function previousApplicableDay(task: Task, from: Date): Date | null {
+  const day = new Date(from);
+  for (let i = 0; i < 8; i++) {
+    day.setDate(day.getDate() - 1);
+    if (appliesOn(task, day)) return day;
+  }
+  return null;
+}
+
+// A streak survives while it was extended either today or on the last day
+// this habit applied to. Anything older means a day it applied to went
+// unfinished, and the run is over.
+export function currentStreak(task: Task, now: Date = new Date()): number {
+  if (task.kind !== "habit") return 0;
+
+  const streak = task.streak ?? 0;
+  if (streak <= 0 || !task.streakDay) return 0;
+
+  if (task.streakDay === toDayKey(now)) return streak;
+
+  const previous = previousApplicableDay(task, now);
+  return previous && task.streakDay === toDayKey(previous) ? streak : 0;
+}
+
 export function isDoneForNow(task: Task, now: Date = new Date()): boolean {
   if (task.kind === "one_off" || task.kind === "milestone") {
     return task.completedAt !== null;
@@ -105,12 +136,41 @@ export async function toggleTask(task: Task, now: Date = new Date()): Promise<vo
   // tapping it once more when the day is complete clears it - which is the
   // only way to correct a tap you did not mean.
   if (task.kind === "habit") {
+    const target = timesPerDay(task);
     const current = doneToday(task, now);
-    const next = current >= timesPerDay(task) ? 0 : current + 1;
+    const next = current >= target ? 0 : current + 1;
+    const today = toDayKey(now);
+    const grewToday = task.streakDay === today;
+
+    let streak = task.streak ?? 0;
+    let streakDay = task.streakDay ?? null;
+
+    if (next >= target && !grewToday) {
+      // Today is finished: the run grows by one from wherever it stood.
+      streak = currentStreak(task, now) + 1;
+      streakDay = today;
+    } else if (next === 0 && grewToday) {
+      // Clearing a day that had been completed takes today's step back,
+      // so a mis-tap does not leave a streak that was never earned.
+      streak = Math.max(0, streak - 1);
+      const previous = previousApplicableDay(task, now);
+      streakDay = streak > 0 && previous ? toDayKey(previous) : null;
+    }
+
+    const graduating = streak >= STREAK_TO_GRADUATE;
+
     await db.tasks.put({
       ...task,
       completedToday: next,
-      lastCompletedOn: toDayKey(now),
+      lastCompletedOn: today,
+      streak,
+      streakDay,
+      // Three weeks in it is not a new habit any more, it is just something
+      // you do - so it stops being tracked as one and becomes an ordinary
+      // daily task, which is the whole point of building it.
+      ...(graduating
+        ? { kind: "daily" as const, weekdays: null, timesPerDay: null }
+        : {}),
     });
     return;
   }
