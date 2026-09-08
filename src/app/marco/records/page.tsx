@@ -3,6 +3,8 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { useState } from "react";
 import { db } from "@/lib/db";
+import { computeBodyPotential } from "@/lib/body-potential";
+import { getBodyMetrics } from "@/lib/metrics";
 import { softDelete } from "@/lib/backup";
 import { formatHours } from "@/components/capture-list";
 import { useAgentName } from "@/lib/use-agent-names";
@@ -46,6 +48,12 @@ export default function HealthRecordsPage() {
     () => db.captures.where("agent").equals("marco").reverse().sortBy("capturedAt"),
     [],
   );
+  const metrics = useLiveQuery(() => getBodyMetrics(), []);
+
+  // The Health screen shows only the headline number, so the arithmetic
+  // behind it lives here - a score you cannot take apart is one you either
+  // over-trust or ignore.
+  const potential = computeBodyPotential(captures ?? [], metrics);
 
   const rows = (captures ?? []).filter((c) => filter === "all" || c.kind === filter);
   const now = new Date();
@@ -67,6 +75,38 @@ export default function HealthRecordsPage() {
           interpreted &mdash; it is what you said, when you said it.
         </p>
       </div>
+
+      <section className="lip flex flex-col gap-3 rounded-xl border border-border bg-background-elevated p-3">
+        <p className="text-[10px] uppercase tracking-wider text-foreground-muted">
+          What the score was made of
+        </p>
+        {potential.components.map((component) => (
+          <div key={component.key} className="flex flex-col gap-1">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-xs font-medium">{component.label}</span>
+              <span
+                className="text-xs tabular-nums"
+                style={{
+                  color: component.score === null ? "var(--color-stale)" : "var(--color-marco)",
+                }}
+              >
+                {component.score === null ? "not logged" : `${component.score}%`}
+              </span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full" style={{ backgroundColor: "var(--border)" }}>
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${component.score ?? 0}%`,
+                  backgroundColor:
+                    component.score === null ? "var(--color-stale)" : "var(--color-marco)",
+                }}
+              />
+            </div>
+            <span className="text-[11px] text-foreground-muted">{component.detail}</span>
+          </div>
+        ))}
+      </section>
 
       <div className="flex flex-wrap gap-2">
         {FILTERS.map((f) => {
