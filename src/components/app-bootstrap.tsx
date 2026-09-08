@@ -5,6 +5,7 @@ import { Capacitor } from "@capacitor/core";
 import { scheduleDailyDigest } from "@/lib/notifications";
 import { installReminderSync, syncReminders } from "@/lib/reminders";
 import { snapshotIfDue } from "@/lib/snapshot";
+import { seedDailyReview } from "@/lib/seed";
 import { useAgentNamesStore } from "@/store/agent-names-store";
 import { useCurrencyStore } from "@/store/currency-store";
 
@@ -19,6 +20,11 @@ export function AppBootstrap() {
     // client render identical to the build-time HTML.
     syncCurrency();
     syncAgentNames();
+
+    // The one thing the app suggests by default: an evening habit to bring
+    // the day up to date. Runs on every launch and does nothing on all but
+    // the first, and never returns once it has been deleted.
+    void seedDailyReview();
 
     // This app has no server, so the browser holds the only copy. Persistent
     // storage is exempt from the automatic eviction that otherwise clears
