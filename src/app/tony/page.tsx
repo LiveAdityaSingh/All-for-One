@@ -2,6 +2,7 @@
 
 import { useLiveQuery } from "dexie-react-hooks";
 import { AgentHeader } from "@/components/agent-header";
+import { ExampleRows } from "@/components/example-rows";
 import { AppLink } from "@/components/app-link";
 import { ChatInputBar } from "@/components/chat-input-bar";
 import { ScoreCard } from "@/components/score-card";
@@ -119,10 +120,32 @@ export default function TonyPage() {
 
       <ScoreCard agent="tony" score={pipelineHealth(applications ?? [])} />
 
+      {applications?.length === 0 && (
+        <ExampleRows
+          agent="tony"
+          intro="Nothing tracked yet. This is what it looks like once you start:"
+          rows={[
+            {
+              primary: "Monzo",
+              secondary: "Senior Backend Engineer · Applied",
+              how: "applied to Monzo for Senior Backend Engineer",
+              spoken: true,
+            },
+            {
+              primary: "Initech",
+              secondary: "ML Engineer · Interviewed",
+              how: "Advance moves a row along a stage at a time.",
+            },
+            {
+              primary: "Globex",
+              secondary: "Data Scientist · applied 24 days ago",
+              how: "Rows you hear nothing back on go quiet on their own and ask to be chased.",
+            },
+          ]}
+        />
+      )}
+
       <ul className="flex flex-col gap-3 px-4">
-        {applications?.length === 0 && (
-          <p className="text-sm text-foreground-muted">No applications yet.</p>
-        )}
         {applications?.map((app) => <ApplicationRow key={app.id} app={app} />)}
       </ul>
 

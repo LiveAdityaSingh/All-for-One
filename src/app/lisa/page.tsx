@@ -4,6 +4,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { useState } from "react";
 import { AgentHeader } from "@/components/agent-header";
 import { ChatInputBar } from "@/components/chat-input-bar";
+import { ExampleRows } from "@/components/example-rows";
 import { ScoreCard } from "@/components/score-card";
 import { followThrough } from "@/lib/agent-scores";
 import { db } from "@/lib/db";
@@ -187,9 +188,33 @@ export default function LisaPage() {
       </form>
 
       {open.length === 0 && done.length === 0 && (
-        <p className="px-4 text-sm text-foreground-muted">
-          Nothing scheduled. Try &ldquo;remind me to call the plumber at 5pm&rdquo;.
-        </p>
+        <ExampleRows
+          agent="lisa"
+          intro="Nothing here yet. These are the four kinds of thing this screen holds:"
+          rows={[
+            {
+              primary: "Call the plumber",
+              secondary: "One-off · today at 5pm",
+              how: "remind me to call the plumber at 5pm",
+              spoken: true,
+            },
+            {
+              primary: "Stretch for ten minutes",
+              secondary: "Daily · resets every morning",
+              how: "Pick Daily in the form above; ticking it counts for today only.",
+            },
+            {
+              primary: "Pay the rent",
+              secondary: "Monthly · counts once a month",
+              how: "Pick Monthly in the form above.",
+            },
+            {
+              primary: "Finish the portfolio site",
+              secondary: "Milestone · no reset, just done or not",
+              how: "Pick Milestone for something with an end rather than a rhythm.",
+            },
+          ]}
+        />
       )}
 
       {open.length > 0 && (
