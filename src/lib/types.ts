@@ -123,12 +123,24 @@ export const PROFILE_ID = "me";
 // --- Lisa: scheduling (build spec §7) -------------------------------------
 
 // Daily, monthly, repeating and one-off tasks, plus milestones.
-export type TaskKind = "one_off" | "daily" | "monthly" | "milestone";
+// "habit" is the flexible one: you choose which weekdays it applies to and
+// how many times you mean to do it on each of them. "daily" and "monthly"
+// remain as the two rhythms common enough to be worth a preset.
+export type TaskKind = "one_off" | "habit" | "daily" | "monthly" | "milestone";
 
 export interface Task extends Synced {
   id: string;
   title: string;
   kind: TaskKind;
+  // Habits only. Weekdays are 0-6 with 0 as Sunday, matching Date.getDay,
+  // so a habit can be "weekdays only" or "Tuesdays and Thursdays" rather
+  // than every day or nothing.
+  weekdays?: number[] | null;
+  timesPerDay?: number | null;
+  // How many of today's repetitions are done. Only meaningful while
+  // lastCompletedOn is today; any other date means the count is stale and
+  // reads as zero, which is what makes the reset need no background job.
+  completedToday?: number;
   dueAt: string | null; // ISO date; null for undated daily habits
   completedAt: string | null;
   // For repeating tasks, the last date it was ticked off, so a daily task
@@ -138,11 +150,25 @@ export interface Task extends Synced {
 }
 
 export const TASK_KIND_LABELS: Record<TaskKind, string> = {
-  one_off: "One-off",
+  one_off: "Once",
+  habit: "Habit",
   daily: "Daily",
   monthly: "Monthly",
   milestone: "Milestone",
 };
+
+// What the picker says when you are about to make one. A habit is the only
+// kind whose name changes with tense: you create "a new habit", and what
+// you end up with is "a habit".
+export const TASK_KIND_PICKER_LABELS: Record<TaskKind, string> = {
+  ...TASK_KIND_LABELS,
+  habit: "New habit",
+};
+
+export const WEEKDAY_LABELS = ["S", "M", "T", "W", "T", "F", "S"] as const;
+export const WEEKDAY_NAMES = [
+  "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday",
+] as const;
 
 // --- Tony: job applications (build spec §6) -------------------------------
 

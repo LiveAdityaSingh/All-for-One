@@ -11,7 +11,7 @@ import { LocalNotifications } from "@capacitor/local-notifications";
 import { db } from "./db";
 import { getAgentNames } from "./agent-names";
 import { ensureNotificationPermission } from "./notifications";
-import { isDoneForNow } from "./tasks";
+import { appliesOn, isDoneForNow } from "./tasks";
 import type { Task } from "./types";
 
 // Android keeps every pending alarm in memory in system_server, and a
@@ -75,11 +75,18 @@ export function nextReminderAt(task: Task, now: Date = new Date()): Date | null 
   // Ticked for this period already, so the next one is owed instead.
   const settled = isDoneForNow(task, now);
 
-  if (task.kind === "daily") {
+  if (task.kind === "daily" || task.kind === "habit") {
     const at = new Date(now);
     at.setHours(due.getHours(), due.getMinutes(), 0, 0);
     if (settled || at.getTime() <= now.getTime()) at.setDate(at.getDate() + 1);
-    return at;
+
+    // A habit set to certain weekdays should not ring on the others, so
+    // walk forward to the next day it actually applies to. Bounded by a
+    // week, because seven steps always find one when any day is selected.
+    for (let i = 0; i < 7 && !appliesOn(task, at); i++) {
+      at.setDate(at.getDate() + 1);
+    }
+    return appliesOn(task, at) ? at : null;
   }
 
   const thisMonth = new Date(

@@ -152,3 +152,43 @@ describe("when a repeating task next comes round", () => {
     expect(nextReminderAt(missed, NOW)).toBeNull();
   });
 });
+
+describe("a habit only rings on the days it applies to", () => {
+  // 2026-09-09 is a Wednesday.
+  const wednesday = new Date("2026-09-09T12:00:00");
+
+  const habit = (over = {}) =>
+    task({
+      id: "h",
+      kind: "habit",
+      dueAt: at("2026-09-09T08:00:00"),
+      weekdays: null,
+      timesPerDay: 1,
+      completedToday: 0,
+      ...over,
+    });
+
+  it("moves past today once its time has gone", () => {
+    const next = nextReminderAt(habit(), wednesday);
+    expect(next?.toISOString().slice(0, 10)).toBe("2026-09-10");
+  });
+
+  // Tuesdays and Thursdays: from Wednesday the next one is Thursday.
+  it("skips forward to the next chosen weekday", () => {
+    const next = nextReminderAt(habit({ weekdays: [2, 4] }), wednesday);
+    expect(next?.getDay()).toBe(4);
+    expect(next?.toISOString().slice(0, 10)).toBe("2026-09-10");
+  });
+
+  it("wraps around the week when the next day is far off", () => {
+    // Mondays only: from Wednesday that is five days away.
+    const next = nextReminderAt(habit({ weekdays: [1] }), wednesday);
+    expect(next?.getDay()).toBe(1);
+    expect(next?.toISOString().slice(0, 10)).toBe("2026-09-14");
+  });
+
+  it("keeps today's slot when the time has not passed yet", () => {
+    const evening = habit({ dueAt: at("2026-09-09T20:00:00") });
+    expect(nextReminderAt(evening, wednesday)?.toISOString().slice(0, 10)).toBe("2026-09-09");
+  });
+});
