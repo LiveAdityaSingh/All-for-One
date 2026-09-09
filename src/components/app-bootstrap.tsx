@@ -7,7 +7,6 @@ import { installReminderSync, syncReminders } from "@/lib/reminders";
 import { snapshotIfDue } from "@/lib/snapshot";
 import { seedDailyReview } from "@/lib/seed";
 import { useOpeningStore } from "@/store/opening-store";
-import { refreshSplashLine } from "@/lib/splash-refresh";
 import { useAgentNamesStore } from "@/store/agent-names-store";
 import { useCurrencyStore } from "@/store/currency-store";
 
@@ -33,11 +32,6 @@ export function AppBootstrap() {
     // back beyond this: the line is meant to fill real waiting, never to
     // manufacture a pause.
     markReady();
-
-    // Computed after the app is up and cached for next time, because
-    // working it out needs the database open - which is the slow part the
-    // line exists to cover.
-    void refreshSplashLine();
 
     // This app has no server, so the browser holds the only copy. Persistent
     // storage is exempt from the automatic eviction that otherwise clears

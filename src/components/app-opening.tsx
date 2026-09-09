@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useOpeningStore } from "@/store/opening-store";
-import { readSplashLine, type SplashLine } from "@/lib/splash-line";
 
 const SEEN_INTRO = "seen_intro";
 
@@ -11,22 +10,12 @@ const SEEN_INTRO = "seen_intro";
 type Phase = "pulse" | "expand" | "condense" | "gone";
 
 const PULSE_MIN_MS = 900; // long enough for one full breath of the orb
-const EXPAND_MS = 520;
-const CONDENSE_MS = 780;
+const EXPAND_MS = 620;
+// The settle is the part worth watching, so it gets the most time.
+const CONDENSE_MS = 1400;
+// Held at full strength while it travels, then faded only as it lands.
+const FADE_MS = 300;
 
-// Read once per session and cached, so the snapshot React subscribes to is
-// stable - a fresh object each call would spin it.
-let cachedLine: SplashLine | null | undefined;
-
-function lineSnapshot(): SplashLine | null {
-  if (cachedLine === undefined) cachedLine = readSplashLine();
-  return cachedLine;
-}
-
-// Null on the server, so the prerendered HTML and the first client render
-// agree; the line appears on the pass after hydration.
-const noServerLine = () => null;
-const neverChanges = () => () => {};
 
 // Reduced motion as a subscription rather than a render-time read, which
 // would be impure, and as a primitive so the snapshot cannot spin.
@@ -77,7 +66,6 @@ export function AppOpening() {
   const [firstRun] = useState(() => !hasSeenIntro());
   const [phase, setPhase] = useState<Phase>("pulse");
   const [target, setTarget] = useState<{ x: number; y: number; size: number } | null>(null);
-  const line = useSyncExternalStore(neverChanges, lineSnapshot, noServerLine);
 
   // Set at mount rather than during render: Date.now() in a render body is
   // impure and can drift between renders.
@@ -96,17 +84,6 @@ export function AppOpening() {
     if (!ready || !skipIntro) return;
     rememberIntroSeen();
   }, [ready, skipIntro]);
-
-  // Take away the splash that was painted with the document. Faded rather
-  // than cut, so a fast launch does not flicker.
-  useEffect(() => {
-    if (!ready) return;
-    const splash = document.getElementById("opening-splash");
-    if (!splash) return;
-    splash.classList.add("leaving");
-    const timer = window.setTimeout(() => splash.remove(), 300);
-    return () => window.clearTimeout(timer);
-  }, [ready]);
 
   useEffect(() => {
     if (!ready || skipIntro) return;
@@ -138,9 +115,10 @@ export function AppOpening() {
     return () => timers.forEach((t) => window.clearTimeout(t));
   }, [ready, skipIntro]);
 
-  // On a later launch there is no sequence to run: the overlay is simply
-  // there until the app is, which is usually a fraction of a second.
-  const shown: Phase = skipIntro ? (ready ? "gone" : "pulse") : phase;
+  // Only the first launch has an opening. Every launch after shows the app
+  // straight away: the overlay had barely a frame to live in, so it read as
+  // a flicker rather than a moment.
+  const shown: Phase = skipIntro ? "gone" : phase;
 
   if (shown === "gone") return null;
 
@@ -161,7 +139,7 @@ export function AppOpening() {
         // The ground goes as the orb condenses, so the app is revealed by
         // the light drawing back rather than by a curtain lifting.
         backgroundColor: condensing ? "transparent" : "var(--background)",
-        transition: `background-color ${CONDENSE_MS}ms ease-out`,
+        transition: `background-color ${Math.round(CONDENSE_MS * 0.7)}ms ease-out`,
       }}
     >
       {!skipIntro && (
@@ -178,25 +156,30 @@ export function AppOpening() {
           borderRadius: "50%",
           background:
             "radial-gradient(circle at 50% 50%, color-mix(in oklch, var(--color-jarvis) 92%, transparent) 0%, color-mix(in oklch, var(--color-jarvis) 55%, transparent) 45%, transparent 70%)",
-          transition: `width ${expanding ? EXPAND_MS : CONDENSE_MS}ms cubic-bezier(0.4, 0, 0.2, 1), height ${
-            expanding ? EXPAND_MS : CONDENSE_MS
-          }ms cubic-bezier(0.4, 0, 0.2, 1), margin ${
-            expanding ? EXPAND_MS : CONDENSE_MS
-          }ms cubic-bezier(0.4, 0, 0.2, 1), left ${CONDENSE_MS}ms ease-out, top ${CONDENSE_MS}ms ease-out, opacity 300ms ease-out`,
+          transition: (() => {
+            const move = expanding ? EXPAND_MS : CONDENSE_MS;
+            // Opening out is a push; settling is a glide, so they get
+            // different curves rather than one shared easing.
+            const ease = expanding
+              ? "cubic-bezier(0.4, 0, 0.2, 1)"
+              : "cubic-bezier(0.22, 1, 0.36, 1)";
+            return [
+              `width ${move}ms ${ease}`,
+              `height ${move}ms ${ease}`,
+              `margin ${move}ms ${ease}`,
+              `left ${move}ms ${ease}`,
+              `top ${move}ms ${ease}`,
+              // Delayed to the end of the journey. Fading from the moment
+              // the condense began meant the orb was invisible for most of
+              // the travel it was supposed to be making.
+              `opacity ${FADE_MS}ms ease-out ${condensing ? move - FADE_MS : 0}ms`,
+            ].join(", ");
+          })(),
           opacity: condensing ? 0 : 1,
         }}
       />
       )}
 
-      {/* Only on later launches: the first run has the orb to watch. */}
-      {!firstRun && line && (
-        <p
-          className="absolute bottom-24 left-0 right-0 px-8 text-center text-sm text-foreground-muted"
-          style={{ opacity: ready ? 0 : 1, transition: "opacity 260ms ease-out" }}
-        >
-          {line.text}
-        </p>
-      )}
     </div>
   );
 }
