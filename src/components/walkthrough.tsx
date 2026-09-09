@@ -152,11 +152,23 @@ export function Walkthrough() {
 
   const last = index === TOUR_STEPS.length - 1;
 
-  // The card sits on whichever side of the cut-out has room, so it never
-  // covers the thing it is describing.
   const viewportH = typeof window === "undefined" ? 800 : window.innerHeight;
   const viewportW = typeof window === "undefined" ? 400 : window.innerWidth;
-  const below = !hole || hole.top + hole.height < viewportH * 0.55;
+
+  // The card sits on whichever side of the cut-out has more room, so it
+  // never covers the thing it is describing - and is then clamped into the
+  // screen, because a tall target like the health gauge left too little
+  // room beneath it and pushed the card out of sight entirely.
+  const ROOM = 260;
+  const above = hole ? hole.top : 0;
+  const beneath = hole ? viewportH - (hole.top + hole.height) : viewportH;
+  const below = !hole || beneath >= above;
+
+  const position = !hole
+    ? { top: "38%" }
+    : below
+      ? { top: Math.min(hole.top + hole.height + 16, Math.max(16, viewportH - ROOM)) }
+      : { bottom: Math.min(viewportH - hole.top + 16, Math.max(16, viewportH - ROOM)) };
 
   return (
     <div className="fixed inset-0 z-[70]" role="dialog" aria-modal="true" aria-label="Walkthrough">
@@ -186,9 +198,14 @@ export function Walkthrough() {
 
       <div
         className="absolute left-0 right-0 px-5"
-        style={below ? { top: hole ? hole.top + hole.height + 16 : "38%" } : { bottom: viewportH - (hole?.top ?? 0) + 16 }}
+        style={position}
       >
-        <div className="lip mx-auto flex max-w-sm flex-col gap-3 rounded-2xl border border-border bg-background-elevated p-4">
+        {/* Capped and scrollable, so a long step on a short screen is
+            still readable and its buttons are still reachable. */}
+        <div
+          className="lip mx-auto flex max-w-sm flex-col gap-3 overflow-y-auto rounded-2xl border border-border bg-background-elevated p-4"
+          style={{ maxHeight: viewportH - 32 }}
+        >
           <div>
             <h2 className="text-base font-semibold">{step.title}</h2>
             <p className="mt-1.5 text-sm text-foreground-muted">{step.body}</p>

@@ -61,6 +61,13 @@ export const TOUR_STEPS: TourStep[] = [
     body: "Log an application, import a spreadsheet, and the claims your CV is allowed to draw on. Every agent keeps its extras behind this button.",
   },
   {
+    id: "daily-menu",
+    route: "/lisa",
+    target: "menu",
+    title: "Adding anything starts here",
+    body: "Add reminder is behind this button, along with everything you have ever tracked. Pick Once for a one-off, New habit to choose your own days and how many times, or Milestone for something with an end.",
+  },
+  {
     id: "daily",
     route: "/lisa",
     target: "score",
@@ -82,6 +89,13 @@ export const TOUR_STEPS: TourStep[] = [
     body: "Say what you spent and it lands here. Name the account and its balance moves too.",
   },
   {
+    id: "finances-menu",
+    route: "/vanessa",
+    target: "menu",
+    title: "Every transaction, and a way out",
+    body: "All transactions across every period, and an export to CSV. The account button beside it adds the accounts you actually use.",
+  },
+  {
     id: "runway",
     route: "/vanessa",
     target: "pulse",
@@ -94,6 +108,13 @@ export const TOUR_STEPS: TourStep[] = [
     target: "score",
     title: "Health: movement, sleep and fuel",
     body: "One number from the three, against ordinary weekly guidelines. It measures how consistently you logged them, and it is not a medical assessment.",
+  },
+  {
+    id: "health-menu",
+    route: "/marco",
+    target: "menu",
+    title: "Measurements, records and a report",
+    body: "Your height and weight so the score means something, everything you have logged by day, and the last four weeks broken down week by week.",
   },
   {
     id: "settings",
