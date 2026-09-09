@@ -50,9 +50,11 @@ export function PulseCard({ runway }: { runway: Runway }) {
     <button
       onClick={() => setOpen((v) => !v)}
       aria-expanded={open}
-      // Trusted figures glow; anything resting on stale inputs gets the
-      // flat treatment, so the light going out of it is itself the signal.
-      className={`mx-4 flex flex-col gap-2 rounded-2xl border p-4 text-left ${trusted ? "agent-glow" : "lip"}`}
+      // The card always glows, like every other agent's headline. The
+      // trust signal survives in the colour of the light rather than in
+      // its absence: violet when the figures can be relied on, drained
+      // grey when they rest on stale inputs.
+      className="lip agent-glow mx-4 flex flex-col gap-2 rounded-2xl border p-4 text-left"
       style={{
         borderColor: trusted
           ? "color-mix(in oklch, var(--color-vanessa) 40%, transparent)"
@@ -60,7 +62,7 @@ export function PulseCard({ runway }: { runway: Runway }) {
         backgroundColor: trusted
           ? "color-mix(in oklch, var(--color-vanessa) 9%, var(--background-elevated))"
           : "var(--background-stale)",
-        ["--glow" as string]: "var(--color-vanessa)",
+        ["--glow" as string]: accent,
       }}
     >
       <div className="flex items-center gap-3">

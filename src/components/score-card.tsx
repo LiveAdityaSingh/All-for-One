@@ -11,10 +11,14 @@ export function ScoreCard({ agent, score }: { agent: AgentId; score: AgentScore 
 
   return (
     <div
-      className="lip mx-4 flex items-center gap-4 rounded-2xl border p-4"
+      className="lip agent-glow mx-4 flex items-center gap-4 rounded-2xl border p-4"
       style={{
         borderColor: `var(--color-${agent}-muted)`,
-        backgroundColor: `color-mix(in oklch, var(--color-${agent}) 7%, var(--background-elevated))`,
+        backgroundColor: `color-mix(in oklch, var(--color-${agent}) 8%, var(--background-elevated))`,
+        // Lit in the agent's own hue, the same treatment Marco's score has.
+        // This is the one element on each screen allowed to glow, which is
+        // what makes it read as the headline rather than another card.
+        ["--glow" as string]: `var(--color-${agent})`,
       }}
     >
       <div className="min-w-0 flex-1">
