@@ -148,35 +148,6 @@ body {
 }
 
 /*
- * The pre-hydration splash. Painted with the document, removed by React
- * once the app is ready, and never given a minimum time on screen: it
- * covers real waiting and is invisible when there is none.
- */
-#opening-splash {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 6rem;
-  background: var(--background);
-  transition: opacity 260ms ease-out;
-}
-
-#opening-splash.leaving {
-  opacity: 0;
-}
-
-#opening-line {
-  margin: 0;
-  padding: 0 2rem;
-  text-align: center;
-  font-size: 0.875rem;
-  color: var(--foreground-muted);
-}
-
-/*
  * The first launch, while everything loads. One slow breath rather than a
  * spinner: a spinner says "wait", this says "here I am".
  */
