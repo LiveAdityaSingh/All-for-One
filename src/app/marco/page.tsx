@@ -34,6 +34,11 @@ export default function MarcoPage() {
             href: "/marco/records",
             hint: "Every health record, by day",
           },
+          {
+            label: "Last four weeks",
+            href: "/marco/report",
+            hint: "Movement, sleep and fuel, week by week",
+          },
         ]}
       />
 
