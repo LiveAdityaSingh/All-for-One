@@ -1,7 +1,7 @@
 "use client";
 
 import { Flame, Rocket, Sparkle, Star, Zap } from "lucide-react";
-import { currentStreak, STREAK_TO_GRADUATE } from "@/lib/tasks";
+import { currentStreak } from "@/lib/tasks";
 import { daysToGraduate, graduationProgress, streakTier, type StreakIcon } from "@/lib/streaks";
 import type { Task } from "@/lib/types";
 
@@ -13,11 +13,17 @@ const ICONS: Record<StreakIcon, typeof Flame> = {
   rocket: Rocket,
 };
 
-// Runs of days, shown under the score for their own sake.
+// Three across is the most a phone can hold and still leave each cell
+// readable; a fourth habit wraps onto a second row rather than shrinking
+// every cell to fit.
+const MAX_COLUMNS = 3;
+
+// Runs of days, in one card divided the way the income/expenses/net box
+// is: one habit fills it, two split it in half, three into thirds.
 //
-// The score says how much you got through; this says how long you have
-// kept something up, which is the part worth being proud of. Nothing is
-// shown at zero: a cold badge for a run you have not started reads as a
+// The score above says how much you got through. This says how long you
+// have kept something up, which is the part worth being proud of. Nothing
+// is shown at zero - a cold cell for a run you have not started reads as a
 // reproach rather than an invitation.
 export function HabitStreaks({ tasks }: { tasks: Task[] }) {
   const now = new Date();
@@ -29,9 +35,14 @@ export function HabitStreaks({ tasks }: { tasks: Task[] }) {
 
   if (runs.length === 0) return null;
 
+  const columns = Math.min(runs.length, MAX_COLUMNS);
+
   return (
-    <div className="flex flex-wrap gap-2 px-4">
-      {runs.map(({ task, streak }) => {
+    <div
+      className="lip mx-4 grid overflow-hidden rounded-2xl border border-border bg-background-elevated"
+      style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+    >
+      {runs.map(({ task, streak }, index) => {
         const tier = streakTier(streak);
         if (!tier) return null;
         const Icon = ICONS[tier.icon];
@@ -40,47 +51,45 @@ export function HabitStreaks({ tasks }: { tasks: Task[] }) {
         return (
           <div
             key={task.id}
-            className="lip flex min-w-0 items-center gap-2 rounded-full border py-1.5 pl-2.5 pr-3"
+            className="flex flex-col items-center gap-1 px-2 py-3"
             style={{
-              borderColor: `color-mix(in oklch, ${tier.colour} 45%, transparent)`,
-              backgroundColor: `color-mix(in oklch, ${tier.colour} 12%, var(--background-elevated))`,
+              // Dividers drawn per cell rather than with divide-x, which
+              // would put a stray line down the first cell of a wrapped row.
+              borderLeft: index % columns === 0 ? undefined : "1px solid var(--border)",
+              borderTop: index >= columns ? "1px solid var(--border)" : undefined,
             }}
           >
-            <Icon
-              size={16}
-              strokeWidth={2.2}
-              aria-hidden
-              style={{
-                color: tier.colour,
-                filter: `drop-shadow(0 0 6px color-mix(in oklch, ${tier.colour} 70%, transparent))`,
-              }}
-            />
-
-            <span
-              className="text-sm font-semibold tabular-nums"
-              style={{ color: tier.colour }}
-            >
-              {streak}
-            </span>
-
-            {/* Only the title truncates. The countdown sat inside it and
-                was the first thing clipped on a narrow chip, which is
-                exactly the part worth keeping. */}
-            <span className="min-w-0 max-w-[9rem] truncate text-xs text-foreground-muted">
+            <span className="w-full truncate text-center text-[10px] uppercase tracking-wider text-foreground-muted">
               {task.title}
             </span>
-            <span className="sr-only">{tier.label}. </span>
 
-            {/* A run with an end in sight is easier to keep than an
-                open-ended one, so the remaining days are always shown. */}
-            {left > 0 && (
-              <span className="shrink-0 text-xs text-foreground-muted opacity-70">
-                {left} to go
+            <span className="flex items-center gap-1.5">
+              <Icon
+                size={18}
+                strokeWidth={2.2}
+                aria-hidden
+                style={{
+                  color: tier.colour,
+                  filter: `drop-shadow(0 0 7px color-mix(in oklch, ${tier.colour} 75%, transparent))`,
+                }}
+              />
+              <span
+                className="text-xl font-semibold tabular-nums"
+                style={{ color: tier.colour }}
+              >
+                {streak}
               </span>
-            )}
+            </span>
 
+            <span className="text-[11px] text-foreground-muted">
+              <span className="sr-only">{tier.label}. </span>
+              {left > 0 ? `${left} to go` : "habit made"}
+            </span>
+
+            {/* Echoes the track under the score above: how close this run
+                is to becoming an ordinary daily task. */}
             <span
-              className="h-1 w-8 shrink-0 overflow-hidden rounded-full"
+              className="mt-0.5 h-1 w-10 overflow-hidden rounded-full"
               style={{ backgroundColor: "var(--border)" }}
               aria-hidden
             >
@@ -95,10 +104,6 @@ export function HabitStreaks({ tasks }: { tasks: Task[] }) {
           </div>
         );
       })}
-
-      <p className="sr-only">
-        A habit kept for {STREAK_TO_GRADUATE} days becomes an ordinary daily task.
-      </p>
     </div>
   );
 }
