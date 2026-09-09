@@ -6,6 +6,8 @@ import { scheduleDailyDigest } from "@/lib/notifications";
 import { installReminderSync, syncReminders } from "@/lib/reminders";
 import { snapshotIfDue } from "@/lib/snapshot";
 import { seedDailyReview } from "@/lib/seed";
+import { useOpeningStore } from "@/store/opening-store";
+import { refreshSplashLine } from "@/lib/splash-refresh";
 import { useAgentNamesStore } from "@/store/agent-names-store";
 import { useCurrencyStore } from "@/store/currency-store";
 
@@ -14,6 +16,7 @@ import { useCurrencyStore } from "@/store/currency-store";
 export function AppBootstrap() {
   const syncCurrency = useCurrencyStore((s) => s.sync);
   const syncAgentNames = useAgentNamesStore((s) => s.sync);
+  const markReady = useOpeningStore((s) => s.markReady);
 
   useEffect(() => {
     // Reading localStorage here rather than during render keeps the first
@@ -25,6 +28,16 @@ export function AppBootstrap() {
     // the day up to date. Runs on every launch and does nothing on all but
     // the first, and never returns once it has been deleted.
     void seedDailyReview();
+
+    // The opening overlay comes down once setup has run. Nothing is held
+    // back beyond this: the line is meant to fill real waiting, never to
+    // manufacture a pause.
+    markReady();
+
+    // Computed after the app is up and cached for next time, because
+    // working it out needs the database open - which is the slow part the
+    // line exists to cover.
+    void refreshSplashLine();
 
     // This app has no server, so the browser holds the only copy. Persistent
     // storage is exempt from the automatic eviction that otherwise clears
@@ -60,7 +73,7 @@ export function AppBootstrap() {
       // snapshot lands somewhere the system will not clear.
       void snapshotIfDue();
     }
-  }, [syncCurrency, syncAgentNames]);
+  }, [syncCurrency, syncAgentNames, markReady]);
 
   return null;
 }

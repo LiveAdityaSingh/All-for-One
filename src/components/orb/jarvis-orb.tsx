@@ -20,6 +20,7 @@ export function JarvisOrb({ warningCount }: JarvisOrbProps) {
 
   return (
     <div
+      data-jarvis-orb
       className="mx-auto aspect-square w-full max-w-sm transition-[max-width] duration-700 ease-out"
       style={{ maxWidth: `${Math.max(140, 384 * scale)}px` }}
     >
