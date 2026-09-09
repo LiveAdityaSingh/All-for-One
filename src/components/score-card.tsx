@@ -11,6 +11,7 @@ export function ScoreCard({ agent, score }: { agent: AgentId; score: AgentScore 
 
   return (
     <div
+      data-tour="score"
       className="lip agent-glow mx-4 flex items-center gap-4 rounded-2xl border p-4"
       style={{
         borderColor: `var(--color-${agent}-muted)`,

@@ -52,6 +52,7 @@ export function TabBar() {
   return (
     <nav
       ref={navRef}
+      data-tour="tabs"
       // Frozen to the bottom of the viewport rather than the end of the
       // document: the page below is free to scroll under it.
       className="lip fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t border-border bg-background-elevated"

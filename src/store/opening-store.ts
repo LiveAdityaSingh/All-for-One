@@ -6,9 +6,15 @@ import { create } from "zustand";
 interface OpeningState {
   ready: boolean;
   markReady: () => void;
+  // The walkthrough waits for the first-run orb to finish rather than
+  // starting on top of it.
+  introDone: boolean;
+  markIntroDone: () => void;
 }
 
 export const useOpeningStore = create<OpeningState>((set) => ({
   ready: false,
   markReady: () => set({ ready: true }),
+  introDone: false,
+  markIntroDone: () => set({ introDone: true }),
 }));

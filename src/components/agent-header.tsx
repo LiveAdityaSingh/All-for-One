@@ -73,6 +73,7 @@ export function AgentHeader({
           <div ref={wrapper} className="relative">
             <button
               onClick={() => setOpen((v) => !v)}
+              data-tour="menu"
               aria-label={`${name} menu`}
               aria-haspopup="menu"
               aria-expanded={open}

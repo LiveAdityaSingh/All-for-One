@@ -207,7 +207,7 @@ export default function VanessaPage() {
       {/* Income / Expenses / Net for the selected period. Red and green do
           numeric work here; Vanessa's identity hue stays violet, which is
           exactly why those two are free to mean loss and gain (spec §4). */}
-      <div className="mx-4 grid grid-cols-3 divide-x divide-border rounded-2xl border border-border bg-background-elevated py-3">
+      <div data-tour="totals" className="mx-4 grid grid-cols-3 divide-x divide-border rounded-2xl border border-border bg-background-elevated py-3">
         {[
           { label: "INCOME", value: money(totals.income), color: "oklch(0.72 0.16 155)" },
           { label: "EXPENSES", value: money(totals.expenses), color: "var(--color-overdue)" },

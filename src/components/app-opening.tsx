@@ -60,6 +60,7 @@ function orbRect(): { x: number; y: number; size: number } {
 
 export function AppOpening() {
   const ready = useOpeningStore((s) => s.ready);
+  const markIntroDone = useOpeningStore((s) => s.markIntroDone);
 
   // Decided once, before paint, so the first launch never flashes the
   // short version before switching.
@@ -83,7 +84,8 @@ export function AppOpening() {
   useEffect(() => {
     if (!ready || !skipIntro) return;
     rememberIntroSeen();
-  }, [ready, skipIntro]);
+    markIntroDone();
+  }, [ready, skipIntro, markIntroDone]);
 
   useEffect(() => {
     if (!ready || skipIntro) return;
@@ -105,6 +107,7 @@ export function AppOpening() {
               window.setTimeout(() => {
                 setPhase("gone");
                 rememberIntroSeen();
+                markIntroDone();
               }, CONDENSE_MS),
             );
           }, EXPAND_MS),
@@ -113,7 +116,7 @@ export function AppOpening() {
     );
 
     return () => timers.forEach((t) => window.clearTimeout(t));
-  }, [ready, skipIntro]);
+  }, [ready, skipIntro, markIntroDone]);
 
   // Only the first launch has an opening. Every launch after shows the app
   // straight away: the overlay had barely a frame to live in, so it read as

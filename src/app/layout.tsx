@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AppBootstrap } from "@/components/app-bootstrap";
 import { AppOpening } from "@/components/app-opening";
+import { Walkthrough } from "@/components/walkthrough";
 import { TabBar } from "@/components/tab-bar";
 
 const geistSans = Geist({
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <div className="ambient-light" aria-hidden />
         <AppBootstrap />
         <AppOpening />
+        <Walkthrough />
         <main className="pb-tab-bar pt-6">{children}</main>
         <TabBar />
       </body>
