@@ -39,6 +39,7 @@ export function HabitStreaks({ tasks }: { tasks: Task[] }) {
 
   return (
     <div
+      data-tour="streaks"
       className="lip mx-4 grid overflow-hidden rounded-2xl border border-border bg-background-elevated"
       style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
     >

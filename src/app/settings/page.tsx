@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   clearApiKey,
   getApiKey,
@@ -20,6 +21,7 @@ import {
   normaliseAgentName,
 } from "@/lib/agent-names";
 import { useAgentNamesStore } from "@/store/agent-names-store";
+import { forgetWalkthrough } from "@/components/walkthrough";
 import type { AgentId } from "@/lib/types";
 import {
   backupFilename,
@@ -375,6 +377,7 @@ function VoiceAndMoney() {
 // Renaming is cosmetic: the ids behind these names key the colours, the
 // routes and every stored record, so a rename can never orphan data.
 function AgentNames() {
+  const router = useRouter();
   const names = useAgentNamesStore((s) => s.names);
   const rename = useAgentNamesStore((s) => s.rename);
   const applyAll = useAgentNamesStore((s) => s.applyAll);
@@ -472,6 +475,18 @@ function AgentNames() {
         chat on any screen. Only the label changes &mdash; nothing you have already
         logged moves.
       </p>
+
+      {/* The tour is worth being able to see twice: the first run is
+          exactly when someone is least ready to take it in. */}
+      <button
+        onClick={() => {
+          forgetWalkthrough();
+          router.push("/");
+        }}
+        className="self-start rounded-full border border-border px-3 py-1 text-xs"
+      >
+        Show the walkthrough again
+      </button>
     </div>
   );
 }

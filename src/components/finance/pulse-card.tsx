@@ -54,6 +54,7 @@ export function PulseCard({ runway }: { runway: Runway }) {
       // trust signal survives in the colour of the light rather than in
       // its absence: violet when the figures can be relied on, drained
       // grey when they rest on stale inputs.
+      data-tour="pulse"
       className="lip agent-glow mx-4 flex flex-col gap-2 rounded-2xl border p-4 text-left"
       style={{
         borderColor: trusted

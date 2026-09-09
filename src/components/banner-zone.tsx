@@ -31,7 +31,7 @@ export function BannerZone() {
   const overflow = loops.length - visible.length;
 
   return (
-    <div className="flex flex-col gap-2 px-4">
+    <div data-tour="loops" className="flex flex-col gap-2 px-4">
       <p className="text-xs uppercase tracking-wider text-foreground-muted">Waiting on you</p>
 
       {visible.map((loop) => (

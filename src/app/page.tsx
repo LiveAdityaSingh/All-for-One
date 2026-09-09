@@ -70,6 +70,7 @@ export default function JarvisLanding() {
             is his room. */}
         <AppLink
           href="/settings"
+          data-tour="settings"
           aria-label="Settings"
           className="-mr-2 -mt-1 flex h-11 w-11 items-center justify-center rounded-full"
         >

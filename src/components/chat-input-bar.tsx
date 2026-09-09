@@ -205,7 +205,7 @@ export function ChatInputBar({ variant, placeholder }: ChatInputBarProps) {
   const accentColor = variant === "jarvis" ? "var(--color-jarvis)" : undefined;
 
   return (
-    <div ref={dockRef} className="chat-dock flex flex-col gap-2 px-4">
+    <div ref={dockRef} data-tour="chat" className="chat-dock flex flex-col gap-2 px-4">
       {feedback && <p className="text-xs text-foreground-muted">{feedback}</p>}
 
       <UndoBar />

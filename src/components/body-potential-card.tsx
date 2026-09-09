@@ -19,6 +19,7 @@ export function BodyPotentialCard({
 
   return (
     <div
+      data-tour="score"
       className="lip agent-glow mx-4 flex flex-col gap-2 rounded-2xl border p-4"
       style={{
         borderColor: "var(--color-marco-muted)",
