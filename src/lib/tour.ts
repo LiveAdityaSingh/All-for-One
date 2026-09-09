@@ -6,8 +6,14 @@
 // nothing, and the reader is standing in front of their own app waiting to
 // use it.
 
+import type { AgentId } from "./types";
+
 export interface TourStep {
   id: string;
+  // Whose section this step belongs to. That agent's tab icon is left lit
+  // through the overlay for the whole run of steps, so it is always clear
+  // whose walkthrough is going on.
+  agent?: AgentId;
   // Where this step lives. The walkthrough navigates there before showing
   // it, so a step can point at anything on any screen.
   route?: string;
@@ -41,6 +47,7 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     id: "home",
+    agent: "jarvis",
     route: "/",
     target: "loops",
     title: "What is waiting on you",
@@ -48,6 +55,7 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     id: "job",
+    agent: "tony",
     route: "/tony",
     target: "score",
     title: "Job: is the pipeline alive?",
@@ -55,6 +63,7 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     id: "job-menu",
+    agent: "tony",
     route: "/tony",
     target: "menu",
     title: "Everything else lives here",
@@ -62,6 +71,7 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     id: "daily-menu",
+    agent: "lisa",
     route: "/lisa",
     target: "menu",
     title: "Adding anything starts here",
@@ -69,6 +79,7 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     id: "daily",
+    agent: "lisa",
     route: "/lisa",
     target: "score",
     title: "Daily: what you said you would do",
@@ -76,6 +87,7 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     id: "streaks",
+    agent: "lisa",
     route: "/lisa",
     target: "streaks",
     title: "Habits build a run",
@@ -83,6 +95,7 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     id: "finances",
+    agent: "vanessa",
     route: "/vanessa",
     target: "totals",
     title: "Finances: in, out, and what is left",
@@ -90,6 +103,7 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     id: "finances-menu",
+    agent: "vanessa",
     route: "/vanessa",
     target: "menu",
     title: "Every transaction, and a way out",
@@ -97,6 +111,7 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     id: "runway",
+    agent: "vanessa",
     route: "/vanessa",
     target: "pulse",
     title: "How long the money lasts",
@@ -104,6 +119,7 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     id: "health",
+    agent: "marco",
     route: "/marco",
     target: "score",
     title: "Health: movement, sleep and fuel",
@@ -111,6 +127,7 @@ export const TOUR_STEPS: TourStep[] = [
   },
   {
     id: "health-menu",
+    agent: "marco",
     route: "/marco",
     target: "menu",
     title: "Measurements, records and a report",
