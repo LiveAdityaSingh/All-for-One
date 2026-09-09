@@ -69,6 +69,7 @@ export function TabBar() {
           <AppLink
             key={tab.id}
             href={tab.href}
+            data-tour-tab={tab.id}
             className="flex flex-1 flex-col items-center gap-1 py-3"
           >
             <Icon
